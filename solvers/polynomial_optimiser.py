@@ -1,7 +1,7 @@
+import re
 from typing import List
-from typing import Tuple
 
-from pyariadne import BoxDomainType
+from pyariadne import BoxDomainType, nul
 from pyariadne import dp
 from pyariadne import FloatDP
 from pyariadne import FloatDPPoint
@@ -11,23 +11,36 @@ from pyariadne import ValidatedKleenean
 from pyariadne import ValidatedNumberVector
 
 
-def split_box_around_zero(box: BoxDomainType) -> Tuple[BoxDomainType, BoxDomainType]:
-    # TODO: or use split(around=0)?
-    boxes = (
-        BoxDomainType([(box[0].lower_bound(), FloatDP(0, dp))]),
-        BoxDomainType([(FloatDP(0, dp), box[0].upper_bound())])
-    )
-    return boxes
+ZERO = FloatDP(0, dp)
+
+
+def _convert_function_to_expression_to_function(function: Function) -> Function:
+    function_str: str = function.__crepr__()[1: -1]
+    function_split = re.split(r"(\*|\+)", function_str)
+    function_split = [item.strip() for item in function_split if item]
+    print(function_split)
+    function_representation = {}
+    index = 0
+    append = []
+    for expression in function_split:
+        if "x" in expression:
+            function_representation[index] = 0
+            index += 1
+            for i in append:
+                ...
+            append.clear()
+        else:
+            append.append(expression)
+
+    return function
 
 
 def _convert_polynomial(p: ValidatedFeasibilityProblem) -> List[ValidatedFeasibilityProblem]:
     div = Function(1, lambda x: x)
     g = p.g[0] / div[0]  # TODO: convert function to 1/x ==> look at the bottom
     domain = p.D  # TODO: convert domain also to be 1/D
-    zero = FloatDP(0, dp)
-    # TODO: use zero instead?
-    if domain.contains(FloatDPPoint(1, dp)):
-        domain_left, domain_right = split_box_around_zero(box=domain)
+    if domain.contains(FloatDPPoint(ZERO)):
+        domain_left, domain_right = domain.split(0, ZERO)
         problems = [
             ValidatedFeasibilityProblem(domain_left, g, p.C),
             ValidatedFeasibilityProblem(domain_right, g, p.C)
@@ -57,29 +70,33 @@ class PolynomialOptimiser:  # (ValidatedOptimiserInterface):
 
         return ValidatedKleenean(True)
 
-    def minimise(self, p: ValidatedFeasibilityProblem) -> ValidatedNumberVector:
-        problems = _convert_polynomial(p=p)
-        # opt = nul(...)
-        for problem in problems:
-            pass # TODO: solve each and return lowest value
-        # TODO: set gradient to 0 and use Newton approach
+    def _solve_problem(self, p: ValidatedFeasibilityProblem) -> ValidatedNumberVector:
+        # TODO: implement using Newton approach
         pass
 
+    def minimise(self, p: ValidatedFeasibilityProblem) -> ValidatedNumberVector:
+        problems = _convert_polynomial(p=p)
+        opt = nul(0)
+        for problem in problems:
+            pass
+            # TODO: solve each and return lowest value
+        # TODO: set gradient to 0 and use Newton approach
 
-opt = PolynomialOptimiser()
-g = Function(1, lambda x: x)  # when we define this, we get an EffectiveMultivariateFunction, how to
-# get x out of this for instance (i.e., the function)
+        return opt
+
+
+solver = PolynomialOptimiser()
+g = Function(1, lambda x: 3*x)
+print(_convert_function_to_expression_to_function(function=g))
+print()
 
 # p(x) = a_0 + a_1*x + ...
 # q(x) = x^2 * p / x
 
-# ==> either dict or use expression from ariadne
-# then use RealValuation
+# ==> either dict or use expression from ariadne then use RealValuation
 
-
-# Make polynomial class / function that returns list of index and coefficients ==> parse that back
-# to polynomial ariadne function
-C = BoxDomainType([{"-0.0625": "0.0625"}])
-D1 = BoxDomainType([(-1, FloatDP.inf(dp))])
-fp1 = ValidatedFeasibilityProblem(D1, g, C)
-print(opt.feasible(fp1))
+# Make polynomial class / function that returns list of index and coefficients ==> parse that back to polynomial ariadne function
+# C = BoxDomainType([{"-0.0625": "0.0625"}])
+# D1 = BoxDomainType([(-1, FloatDP.inf(dp))])
+# fp1 = ValidatedFeasibilityProblem(D1, g, C)
+# print(solver.feasible(fp1))
