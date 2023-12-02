@@ -81,6 +81,17 @@ def _convert_literal_expressions_to_function(function_as_literal_expressions: Li
 def _convert_function_to_TODO(function: Function) -> Function:
     function_as_literal_expressions = _convert_function_to_literal_expressions(function=function)
     # TODO: swap around or whatever to get x^2 p(1/x)
+    # 1D case:
+    # Step 1: get the degree of the polynomial
+    # Step 2: for each part of the polynomial (i.e. seperated with a '+' or '-'),
+    #            get the coefficient, and use the power: |current_power-degree|
+    # Step 3: Polynomial q(x): result_step_2 multiplied with x^degree
+    # EXAMPLE:
+    # p(x) = 5 + 2x + 0.5x^2
+    # q(x) = x^2 * p(1/x) = x^2 * (5 + 2/x + 0.5/x^2) = 5x^2 + 2x + 0.5
+    # so what actually happens is that we read the list of *powers* from the _LiteralExpression
+    # in reverse while maintaining the same order of *coefficients*
+
 
     return _convert_literal_expressions_to_function(function_as_literal_expressions=function_as_literal_expressions)
 
@@ -137,6 +148,7 @@ class PolynomialOptimiser:  # (ValidatedOptimiserInterface):
 
 solver = PolynomialOptimiser()
 g = Function(2, lambda x: [pow(x[0], 2) + 3 * x[1] - 1])
+#g = Function(1, lambda x: [pow(x[0], 2) + 3 * x[0] - 1]) #1D function
 C = BoxDomainType([{"-0.0625": "0.0625"}])
 D1 = BoxDomainType([(-1, FloatDP.inf(dp))])
 fp1 = ValidatedFeasibilityProblem(D1, g, C)
