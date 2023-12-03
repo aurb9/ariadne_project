@@ -1,8 +1,8 @@
+##EXAMPLE FILE IN PROGRESS OF GETTING A BOX DIVISION BY 1/BOX
+
 from pyariadne import BoxDomainType, FloatDP, dp
 
-# Needed for division and comparison
-ONE = FloatDP(1, dp)
-ZERO = FloatDP(0, dp)
+
 
 INF = FloatDP.inf(dp)
 #B=BoxDomainType([("0.5", INF)]) #case 1
