@@ -100,7 +100,7 @@ def _convert_polynomial(p: ValidatedFeasibilityProblem) -> List[ValidatedFeasibi
     div = Function(1, lambda x: x)
     g = _convert_function_to_TODO(function=p.g)
     domain = p.D  # TODO: convert domain also to be 1/D
-    if domain.contains(FloatDPPoint(ZERO)):
+    if domain.contains(FloatDPPoint([ZERO])):
         domain_left, domain_right = domain.split(0, ZERO)
         problems = [
             ValidatedFeasibilityProblem(domain_left, g, p.C),
