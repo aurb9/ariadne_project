@@ -3,7 +3,6 @@
 from pyariadne import BoxDomainType, FloatDP, dp
 
 
-
 INF = FloatDP.inf(dp)
 #B=BoxDomainType([("0.5", INF)]) #case 1
 #B=BoxDomainType([("-0.5", INF)]) #case 2
@@ -14,7 +13,6 @@ print('Original box', B)
 
 l = B[0].lower_bound()
 u = B[0].upper_bound()
-
 
 #if LOWER_BOUND > 0:
 #   Therefore, the UPPER_BOUND > 0, so:

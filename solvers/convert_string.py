@@ -11,6 +11,6 @@ first = FloatDP(numerator, dp)
 second = FloatDP(denominator, dp)
 
 together = first/second
-together = together.value() # An approximation to the actual value
-print(together) # is a FloatDP
+together = together.value()  # An approximation to the actual value
+print(together)
 print(type(together))

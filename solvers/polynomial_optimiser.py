@@ -1,6 +1,5 @@
-import re
 from typing import List
-from typing import Union
+from typing import Tuple
 
 from pyariadne import BoxDomainType
 from pyariadne import nul
@@ -16,131 +15,31 @@ from pyariadne import ValidatedNumberVector
 
 
 ZERO = FloatDP(0, dp)
+ONE = FloatDP(1, dp)
 
 
-class _LiteralExpression:
-    _powers: List[float] = None
-    _coefficients: List[float] = None
-
-    def __init__(self, n_parameters: int, expression: List[str]) -> None:
-        # TODO: convert expression
-        default = [0 for _ in range(n_parameters)]
-        self._powers = default
-        self._coefficients = default
-
-    @property
-    def powers(self) -> List[float]:
-        return self._powers
-
-    @property
-    def coefficients(self) -> List[float]:
-        return self._coefficients
-
-    @property
-    def value(self) -> List[Union[List, float]]:
-        return [self._powers, self._coefficients]
-
-
-def _convert_function_to_literal_expressions(function: Function) -> List[_LiteralExpression]:
-    """
-    Converts an ariadne Function to a list of coefficients / powers describing the function.
-    e.g., x_0^2 + 3x_1 + 1 ==> [((2, 0), (1, 0)), ((0, 1), (0, 3)), ((0, 0), (1, 0))]
-
-    :param function: function to be transformed
-    :return: list of literal expressions
-    """
-    function_str: str = function.__repr__()
-    argument_match = re.search(r"Function\((\d+)", function_str)
-    if argument_match:
-        n_arguments = int(argument_match.group(1))
-    else:
-        raise Exception("Number of arguments not found")
-
-    # TODO: split for each ()
-    lambda_match = re.search(r"lambda x: \[(.*)\]", function_str)
-    if lambda_match:
-        lambda_expression = lambda_match.group(1)[1: -1]
-        function_as_literal_expressions = re.split(r'(\(\))', lambda_expression)
-    else:
-        raise Exception("Function not found")
-
-    # TODO: convert to literal expressions
-    print(function)
-    print(n_arguments)
-    print(function_as_literal_expressions)
-    input()
-
-    return function_as_literal_expressions
-
-
-# TODO: should return polynomial ariadne function
-def _convert_literal_expressions_to_function(function_as_literal_expressions: List[_LiteralExpression]) -> Function:
-    # TODO: implement
-    return Function()
-
-
-def _convert_function_to_TODO(function: Function) -> Function:
-    function_as_literal_expressions = _convert_function_to_literal_expressions(function=function)
-    # TODO: swap around or whatever to get x^2 p(1/x)
-    # 1D case:
-    # Step 1: get the degree of the polynomial
-    # Step 2: for each part of the polynomial (i.e. seperated with a '+' or '-'),
-    #            get the coefficient, and use the power: |current_power-degree|
-    # Step 3: Polynomial q(x): result_step_2 multiplied with x^degree
-    # EXAMPLE:
-    # p(x) = 5 + 2x + 0.5x^2
-    # q(x) = x^2 * p(1/x) = x^2 * (5 + 2/x + 0.5/x^2) = 5x^2 + 2x + 0.5
-    # so what actually happens is that we read the list of *powers* from the _LiteralExpression
-    # in reverse while maintaining the same order of *coefficients*
-
-
-    return _convert_literal_expressions_to_function(function_as_literal_expressions=function_as_literal_expressions)
-
-def _convert_signle_box(subdomain: FloatDPExactInterval) -> tuple:
+def _convert_single_box(subdomain: FloatDPExactInterval) -> Tuple[FloatDP, FloatDP]:
     """
     Convert a single box by 1/box. E.g., box=[-5, 10] --> new_box = [-1/5, 1/10]
-    :param subdomain: an invterval with a lowerbound and upperbound in the original domain
+    :param subdomain: an interval with a lowerbound and upperbound in the original domain
     :return: tuple of (new_lowerbound and new_upperbound) for the creation of a new box
     """
-    # Needed for division and comparison
-    ONE = FloatDP(1, dp)
-    ZERO = FloatDP(0, dp)
-
     l = subdomain.lower_bound()
     u = subdomain.upper_bound()
-
     if l > ZERO and u > ZERO:
-        # if l > ZERO: #can be converted later, but since u<l we need this check
         l_new = ONE / u
         u_new = ONE / l
-
-        l_new = l_new.lower().raw()
-        u_new = u_new.lower().raw()
-
-        return (l_new, u_new)
     elif l < ZERO < u:
-        # E.g. [-1, 2] --> 1/-1, 1/2 --> -1, 1/2 --> [-1, 1/2]
-        # E.g. [-10, 5] --> 1/-10, 1/5 --> -1/10, 1/5
-        # Since l<0, 1/l stays negative
-        # Since u>0, 1/u stays positive
         l_new = ONE / l
         u_new = ONE / u
-
-        l_new = l_new.lower().raw()
-        u_new = u_new.lower().raw()
-
-        return (l_new, u_new)
-    #elif l < ZERO and u < ZERO:
     else:
-        # Both values are negative
-        # E.g. [-10, -2] --> -1/10, -1/2 so l and u get swapped
         l_new = ONE / u
         u_new = ONE / l
 
-        l_new = l_new.lower().raw()
-        u_new = u_new.lower().raw()
+    l_new = l_new.lower().raw()
+    u_new = u_new.lower().raw()
 
-        return (l_new, u_new)
+    return l_new, u_new
 
 def _convert_domains(domain: BoxDomainType) -> BoxDomainType:
     """
@@ -150,7 +49,7 @@ def _convert_domains(domain: BoxDomainType) -> BoxDomainType:
     """
     subdomains = []
     for dim_i in range(domain.dimension()):
-        subdomains.append(_convert_signle_box(domain[dim_i]))
+        subdomains.append(_convert_single_box(domain[dim_i]))
     new_domain = BoxDomainType(subdomains)
 
     return new_domain
@@ -178,7 +77,7 @@ class PolynomialOptimiser:  # (ValidatedOptimiserInterface):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-    def _feasible_problem(self, p: ValidatedFeasibilityProblem) -> ValidatedKleenean:
+    def _is_problem_feasible(self, p: ValidatedFeasibilityProblem) -> ValidatedKleenean:
         # TODO: implement
 
         return ValidatedKleenean(False)
@@ -188,7 +87,7 @@ class PolynomialOptimiser:  # (ValidatedOptimiserInterface):
     def feasible(self, p: ValidatedFeasibilityProblem) -> ValidatedKleenean:
         problems = _convert_polynomial(p=p)
         for problem in problems:
-            if self._feasible_problem(p=problem) == "false":  # TODO: can be changed to not self._feasible?
+            if self._is_problem_feasible(p=problem) == "false":  # TODO: can be changed to not self._feasible?
                 return ValidatedKleenean(False)
 
         return ValidatedKleenean(True)
