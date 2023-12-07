@@ -1,8 +1,9 @@
 from typing import Any
 from typing import Dict
 from typing import Optional
+from typing import Union
 
-from pyariadne import Function, sqr, FloatDP, dp, pow, Real, Rational
+from pyariadne import Function
 
 from utils._convert_function_as_literal_expressions_to_function import (
     _convert_function_as_literal_expressions_to_function
@@ -21,9 +22,9 @@ class PolynomialFunction:
     _n_variables: int
     _function_as_literal_expressions: Dict[str, LiteralExpression]
 
-    def __init__(self, n_variables: int, f: callable) -> None:
+    def __init__(self, n_variables: int, f: str) -> None:
         self._n_variables = n_variables
-        self._function_as_literal_expressions = _convert_function_to_literal_expressions(n_variables=n_variables, f=f)
+        self._function_as_literal_expressions = _convert_function_to_literal_expressions(function_str=f)
 
     def __new__(
         cls,
@@ -174,6 +175,20 @@ class PolynomialFunction:
         result = self_reciprocal.__mul__(other=other)
         return result
 
+    def evaluate_at_one_over_x(self) -> "PolynomialFunction":
+        x = LiteralExpression(expression="*".join([f"x{i}" for i in range(self._n_variables)]))
+        function_as_literal_expressions = {}
+        for expression in self._function_as_literal_expressions.values():
+            new_expression = expression / x
+            function_as_literal_expressions[new_expression.format] = new_expression
+
+        result = PolynomialFunction.__new__(
+            cls=PolynomialFunction,
+            n_variables=self._n_variables,
+            function_as_literal_expressions=function_as_literal_expressions
+        )
+        return result
+
     @property
     def n_variables(self) -> int:
         return self._n_variables
@@ -184,3 +199,8 @@ class PolynomialFunction:
             function_as_literal_expressions=self._function_as_literal_expressions
         )
         return Function(self._n_variables, f)
+
+    @property
+    def degree(self) -> Union[int, float]:
+        degrees = [expression.degree for expression in self._function_as_literal_expressions.values()]
+        return max(degrees)

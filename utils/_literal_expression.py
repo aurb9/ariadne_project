@@ -209,3 +209,7 @@ class LiteralExpression:
     @property
     def powers(self) -> Dict[int, float]:
         return self._powers
+
+    @property
+    def degree(self) -> Union[int, float]:
+        return max(self._powers.values())

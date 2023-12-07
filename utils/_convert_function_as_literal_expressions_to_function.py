@@ -1,7 +1,6 @@
 from typing import Dict
 
 from pyariadne import pow
-from pyariadne import Real
 from pyariadne import sqr
 
 from utils._literal_expression import LiteralExpression
@@ -39,7 +38,7 @@ def _convert_function_as_literal_expressions_to_function(
 
         elements_to_add.append("*".join(elements_to_multiply))
 
-    function_as_string = "lambda x: " + "+".join(elements_to_add)
+    function_as_string = "lambda x: [" + "+".join(elements_to_add) + "]"
     function = eval(function_as_string)
 
     return function

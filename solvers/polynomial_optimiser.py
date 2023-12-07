@@ -1,116 +1,100 @@
 from typing import List
 from typing import Tuple
 
-from pyariadne import BoxDomainType
+from pyariadne import FloatDPExactBox
+from pyariadne import FloatDPPoint
 from pyariadne import nul
 from pyariadne import dp
 from pyariadne import FloatDP
-from pyariadne import FloatDPPoint
 from pyariadne import FloatDPExactInterval
-from pyariadne import Function
-from pyariadne import pow
-from pyariadne import ValidatedFeasibilityProblem
-from pyariadne import ValidatedKleenean
 from pyariadne import ValidatedNumberVector
+
+from utils.polynomial_function import PolynomialFunction
 
 
 ZERO = FloatDP(0, dp)
 ONE = FloatDP(1, dp)
 
 
-def _convert_single_box(subdomain: FloatDPExactInterval) -> Tuple[FloatDP, FloatDP]:
+def _convert_single_box(box: FloatDPExactInterval) -> Tuple[FloatDP, FloatDP]:
     """
     Convert a single box by 1/box. E.g., box=[-5, 10] --> new_box = [-1/5, 1/10]
     :param subdomain: an interval with a lowerbound and upperbound in the original domain
     :return: tuple of (new_lowerbound and new_upperbound) for the creation of a new box
     """
-    l = subdomain.lower_bound()
-    u = subdomain.upper_bound()
-    if l > ZERO and u > ZERO:
-        l_new = ONE / u
-        u_new = ONE / l
-    elif l < ZERO < u:
-        l_new = ONE / l
-        u_new = ONE / u
+    box_lower_bound = box.lower_bound()
+    box_upper_bound = box.upper_bound()
+    if box_lower_bound > ZERO and box_upper_bound > ZERO:
+        new_box_lower_bound = ONE / box_upper_bound
+        new_box_upper_bound = ONE / box_lower_bound
+    elif box_lower_bound < ZERO < box_upper_bound:
+        new_box_lower_bound = ONE / box_lower_bound
+        new_box_upper_bound = ONE / box_upper_bound
     else:
-        l_new = ONE / u
-        u_new = ONE / l
+        new_box_lower_bound = ONE / box_upper_bound
+        new_box_upper_bound = ONE / box_lower_bound
 
-    l_new = l_new.lower().raw()
-    u_new = u_new.lower().raw()
+    new_box_lower_bound = new_box_lower_bound.lower().raw()
+    new_box_upper_bound = new_box_upper_bound.lower().raw()
 
-    return l_new, u_new
+    return new_box_lower_bound, new_box_upper_bound
 
-def _convert_domains(domain: BoxDomainType) -> BoxDomainType:
+
+def _box_reciprocal(box: FloatDPExactBox) -> FloatDPExactBox:
     """
     Converting the entire domain to 1/domain by going over every subdomain and converting that
-    :param domain: a box containing the domain (can be single or multiple)
+    :param box: a box containing the domain (can be single or multiple)
     :return: the new_domain which is 1/input_domain
     """
-    subdomains = []
-    for dim_i in range(domain.dimension()):
-        subdomains.append(_convert_single_box(domain[dim_i]))
-    new_domain = BoxDomainType(subdomains)
+    sub_boxes = []
+    for dim_i in range(box.dimension()):
+        sub_boxes.append(_convert_single_box(box[dim_i]))
 
-    return new_domain
+    new_box = FloatDPExactBox(sub_boxes)
+    return new_box
 
 
-def _convert_polynomial(p: ValidatedFeasibilityProblem) -> List[ValidatedFeasibilityProblem]:
-    div = Function(1, lambda x: x)
-    g = _convert_function_to_TODO(function=p.g)
-    original_domain = p.D
-    domain = _convert_domains(original_domain)
+def _convert_problem(f: PolynomialFunction, D: FloatDPExactBox) -> List[Tuple[PolynomialFunction, FloatDPExactBox]]:
+    # TODO: unsure how to get q and the new domains ==> to be implemented
+    x_power_degree = PolynomialFunction(n_variables=f.n_variables, f=f"[x[0]**{f.degree}]")
+    q = x_power_degree * f.evaluate_at_one_over_x()
 
-    if domain.contains(FloatDPPoint([ZERO])):
-        domain_left, domain_right = domain.split(0, ZERO)
-        problems = [
-            ValidatedFeasibilityProblem(domain_left, g, p.C),
-            ValidatedFeasibilityProblem(domain_right, g, p.C)
-        ]
+    domain_reciprocal = _box_reciprocal(box=D)
+    if domain_reciprocal.contains(FloatDPPoint([ZERO])):
+        domain_left, domain_right = domain_reciprocal.split(0, ZERO)
+        problems = [(q, domain_left), (q, domain_right)]
     else:
-        problems = [ValidatedFeasibilityProblem(p.D, g, p.C)]
+        problems = [(q, domain_reciprocal)]
 
     return problems
 
 
 class PolynomialOptimiser:  # (ValidatedOptimiserInterface):
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
+    # def __init__(self, *args, **kwargs) -> None:
+    #     super().__init__(*args, **kwargs)
 
-    def _is_problem_feasible(self, p: ValidatedFeasibilityProblem) -> ValidatedKleenean:
-        # TODO: implement
-
-        return ValidatedKleenean(False)
-
-    # TODO: should be either feasible point
-    #  or "certificate of feasibility" (collection of pairs of boxes and multipliers)
-    def feasible(self, p: ValidatedFeasibilityProblem) -> ValidatedKleenean:
-        problems = _convert_polynomial(p=p)
-        for problem in problems:
-            if self._is_problem_feasible(p=problem) == "false":  # TODO: can be changed to not self._feasible?
-                return ValidatedKleenean(False)
-
-        return ValidatedKleenean(True)
-
-    def _solve_problem(self, p: ValidatedFeasibilityProblem) -> ValidatedNumberVector:
+    def _minimise_over_box(self, function: PolynomialFunction, domain: FloatDPExactBox) -> ValidatedNumberVector:
         # TODO: implement using Newton approach
         pass
 
-    def minimise(self, p: ValidatedFeasibilityProblem) -> ValidatedNumberVector:
-        problems = _convert_polynomial(p=p)
+    def minimise(self, f: PolynomialFunction, D: FloatDPExactBox) -> ValidatedNumberVector:
+        problems = _convert_problem(f=f, D=D)
         opt = nul(0)
-        for problem in problems:
-            pass
-            # TODO: solve each and return lowest value
+        for x in problems:
+            f = x[0]
+            domain = x[1]
+            gradients = [f.function.derivative(x) for x in range(f.n_variables)]
+
+        # TODO: solve each and return lowest value
         # TODO: set gradient to 0 and use Newton approach
 
         return opt
 
 
 solver = PolynomialOptimiser()
-g = Function(2, lambda x: [pow(x[0], 2) + 3 * x[1] - 1])
-#g = Function(1, lambda x: [pow(x[0], 2) + 3 * x[0] - 1]) #1D function
-C = BoxDomainType([{"-0.0625": "0.0625"}])
-D1 = BoxDomainType([(-1, FloatDP.inf(dp))])
-fp1 = ValidatedFeasibilityProblem(D1, g, C)
-print(solver.feasible(fp1))
+
+f = PolynomialFunction(n_variables=1, f="[x[0]**2]")
+domain = FloatDPExactBox([(-1, FloatDP.inf(dp))])
+
+opt = solver.minimise(f=f, D=domain)
+print(opt)
