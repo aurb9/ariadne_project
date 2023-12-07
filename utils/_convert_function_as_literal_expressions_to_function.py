@@ -34,6 +34,9 @@ def _convert_function_as_literal_expressions_to_function(
 
             elements_to_multiply.append(term)
 
+        if not elements_to_multiply:
+            elements_to_multiply = [str(coefficient)]
+
         elements_to_add.append("*".join(elements_to_multiply))
 
     function_as_string = "lambda x: " + "+".join(elements_to_add)

@@ -142,7 +142,6 @@ class LiteralExpression:
                 coefficient=self._coefficient * other,
                 powers=self._powers
             )
-
         elif isinstance(other, LiteralExpression):
             self_powers_indexes = set(self._powers.keys())
             other_powers_indexes = set(other._powers.keys())
@@ -164,7 +163,6 @@ class LiteralExpression:
                 coefficient=self._coefficient * other._coefficient,
                 powers=powers
             )
-
         else:
             raise Exception()
 
@@ -173,43 +171,32 @@ class LiteralExpression:
     def __rmul__(self, other: Any) -> "LiteralExpression":
         return self.__mul__(other=other)
 
-    def __truediv__(self, other: Any) -> "LiteralExpression":  # TODO: not sure?
+    def _reciprocal(self) -> "LiteralExpression":
+        result = LiteralExpression.__new__(
+            cls=LiteralExpression,
+            coefficient=int(1 / self._coefficient),
+            powers={k: -power for k, power in self._powers.items()}
+        )
+        return result
+
+    def __truediv__(self, other: Any) -> "LiteralExpression":
         if is_scalar(x=other):
-            result = LiteralExpression.__new__(
-                cls=LiteralExpression,
-                coefficient=int(self._coefficient / other),
-                powers=self._powers
-            )
-
+            other_reciprocal = int(1 / other)
         elif isinstance(other, LiteralExpression):
-            self_powers_indexes = set(self._powers.keys())
-            other_powers_indexes = set(other._powers.keys())
-            common_indexes, missing_self_indexes, missing_other_indexes = get_joint_and_disjoint_sets(
-                self_powers_indexes, other_powers_indexes
-            )
-            powers = {}
-            for x in common_indexes:
-                powers[x] = self._powers[x] - other._powers[x]
-
-            for x in missing_self_indexes:
-                powers[x] = self._powers[x]
-
-            for x in missing_other_indexes:
-                powers[x] = -other._powers[x]
-
-            result = LiteralExpression.__new__(
-                cls=LiteralExpression,
-                coefficient=int(self._coefficient / other._coefficient),
-                powers=powers
-            )
-
+            other_reciprocal = other._reciprocal()
         else:
             raise Exception()
 
+        result = self.__mul__(other=other_reciprocal)
         return result
 
-    def __rtruediv__(self, other: Any) -> "LiteralExpression":  # TODO
-        return self.__truediv__(other=other)
+    def __rtruediv__(self, other: Any) -> "LiteralExpression":
+        if not is_scalar(x=other):
+            raise Exception()
+
+        self_reciprocal = self._reciprocal()
+        result = self_reciprocal.__mul__(other=other)
+        return result
 
     @property
     def format(self) -> str:

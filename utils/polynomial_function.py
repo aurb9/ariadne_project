@@ -45,11 +45,8 @@ class PolynomialFunction:
         )
         return Function(self._n_variables, f).__repr__()
 
-    def __call__(self, x: Any):
-        f = _convert_function_as_literal_expressions_to_function(
-            function_as_literal_expressions=self._function_as_literal_expressions
-        )
-        return Function(self._n_variables, f)(x)
+    def __call__(self, x: Any) -> Any:
+        return self.function(x)
 
     def __neg__(self) -> "PolynomialFunction":
         function_as_literal_expressions = {}
@@ -63,7 +60,7 @@ class PolynomialFunction:
             function_as_literal_expressions=function_as_literal_expressions
         )
 
-    def __add__(self, other: Any) -> "PolynomialFunction":  # TODO: done!
+    def __add__(self, other: Any) -> "PolynomialFunction":
         function_as_literal_expressions = {}
         if is_scalar(x=other):
             function_as_literal_expressions = self._function_as_literal_expressions.copy()
@@ -144,45 +141,46 @@ class PolynomialFunction:
     def __rmul__(self, other: Any) -> "PolynomialFunction":
         return self.__mul__(other=other)
 
-    def __truediv__(self, other: Any) -> "PolynomialFunction":
+    def _reciprocal(self) -> "PolynomialFunction":
         function_as_literal_expressions = {}
+        for expression in self._function_as_literal_expressions.values():
+            new_expression = 1/expression
+            function_as_literal_expressions[new_expression.format] = new_expression
+
+        result = PolynomialFunction.__new__(
+            cls=PolynomialFunction,
+            n_variables=self._n_variables,
+            function_as_literal_expressions=function_as_literal_expressions
+        )
+        return result
+
+    # TODO: division does not support types x/(x + 1) for instance, it instead computes x/x + x/1
+    def __truediv__(self, other: Any) -> "PolynomialFunction":
         if is_scalar(x=other):
-            for expression in self._function_as_literal_expressions.values():
-                new_expression = expression / other
-                function_as_literal_expressions[new_expression.format] = new_expression
-
-            result = PolynomialFunction.__new__(
-                cls=PolynomialFunction,
-                n_variables=self._n_variables,
-                function_as_literal_expressions=function_as_literal_expressions
-            )
-
+            other_reciprocal = int(1 / other)
         elif isinstance(other, PolynomialFunction):
-            for self_expression in self._function_as_literal_expressions.values():
-                for other_expression in other._function_as_literal_expressions.values():
-                    new_expression = self_expression / other_expression
-                    function_as_literal_expressions[new_expression.format] = new_expression
-
-            result = PolynomialFunction.__new__(
-                cls=PolynomialFunction,
-                n_variables=max(self._n_variables, other._n_variables),
-                function_as_literal_expressions=function_as_literal_expressions
-            )
-
+            other_reciprocal = other._reciprocal()
         else:
             raise Exception(_OPERATION_NOT_POSSIBLE_ERROR_MESSAGE, type(other))
 
+        result = self.__mul__(other=other_reciprocal)
         return result
 
-    def __rtruediv__(self, other: Any) -> "PolynomialFunction":  # TODO: this does not work
-        return self.__truediv__(other=other)
+    def __rtruediv__(self, other: Any) -> "PolynomialFunction":
+        if not is_scalar(x=other):
+            raise Exception(_OPERATION_NOT_POSSIBLE_ERROR_MESSAGE, type(other))
+
+        self_reciprocal = self._reciprocal()
+        result = self_reciprocal.__mul__(other=other)
+        return result
 
     @property
     def n_variables(self) -> int:
         return self._n_variables
 
-
-f = PolynomialFunction(n_variables=2, f=lambda x: 5*x[1] + 10)
-g = PolynomialFunction(n_variables=2, f=lambda x: x[1] * x[0])
-
-print(f/g)
+    @property
+    def function(self) -> Function:
+        f = _convert_function_as_literal_expressions_to_function(
+            function_as_literal_expressions=self._function_as_literal_expressions
+        )
+        return Function(self._n_variables, f)
