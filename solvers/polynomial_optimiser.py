@@ -78,9 +78,12 @@ class PolynomialOptimiser:
 
         return nul(0)
 
-    def minimise(self, f: PolynomialFunction, D: FloatDPExactBox) -> ValidatedNumber:
+    def minimise(self, f: PolynomialFunction, D: FloatDPExactBox, convert_problem: bool = True) -> ValidatedNumber:
         solver = IntervalNewtonSolver(1e-8, 12)
-        function, domain = _convert_problem(f=f, D=D)
-        solution = self._minimise_over_box(solver=solver, function=function, domain=domain)
-
+        if convert_problem:
+            f, D = _convert_problem(f=f, D=D)
+        #print('q:', function)
+        #print('D_n:', domain)
+        solution = self._minimise_over_box(solver=solver, function=f, domain=D)
+        #print(solution)
         return ValidatedNumber(1/solution)
