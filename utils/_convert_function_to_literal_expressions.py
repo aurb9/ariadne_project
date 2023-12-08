@@ -14,13 +14,14 @@ def _convert_function_to_literal_expressions(f: Union[str, Function]) -> Dict[st
         .replace("[", "")
         .replace("]", "")
         .replace(" ", "")
-        .lstrip("(")
-        .rstrip(")")
     )
     function_split_by_literals = function_str.split("+")
     function_as_literal_expression = {}
     for x in function_split_by_literals:
         x = x.lstrip("(").rstrip(")")
+        if not x or "*0" in x or x == "0":
+            continue
+
         literal_expression = LiteralExpression(expression=x)
         function_as_literal_expression[literal_expression.format] = literal_expression
 

@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from pyariadne import FloatDPBounds
+from pyariadne import FloatDPBounds, nul
 from pyariadne import FloatDPExactBox
 from pyariadne import dp
 from pyariadne import FloatDP
@@ -57,8 +57,9 @@ def _box_reciprocal(box: FloatDPExactBox) -> FloatDPExactBox:
 def _convert_problem(f: PolynomialFunction, D: FloatDPExactBox) -> Tuple[PolynomialFunction, FloatDPExactBox]:
     assert f.n_variables == 1, "PolynomialOptimiser can only deal with function with one variable."  # TODO: not sure?
 
-    x_power_degree = PolynomialFunction(n_variables=f.n_variables, f=f"[x[0]**{f.degree}]")
-    f_derivative = PolynomialFunction(f.n_variables, f.function.derivative(0))
+    degree = f.degree - 1
+    x_power_degree = PolynomialFunction(n_variables=f.n_variables, f=f"[x[0]**{degree}]")
+    f_derivative = PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(0))
     q = x_power_degree * f_derivative.evaluate_at_one_over_x()
 
     domain_reciprocal = _box_reciprocal(box=D)
@@ -70,14 +71,16 @@ class PolynomialOptimiser:
     def _minimise_over_box(
         self, solver: IntervalNewtonSolver, function: PolynomialFunction, domain: FloatDPExactBox
     ) -> FloatDPBounds:
-        derivative = ValidatedVectorMultivariateFunction(function.function.derivative(0))
-        solutions = solver.solve_all(derivative, domain)
+        function_to_minimise = ValidatedVectorMultivariateFunction(function.function)
+        solutions = solver.solve_all(function_to_minimise, domain)
+        if solutions:
+            return min(solutions)[0]
 
-        return min(solutions)[0]
+        return nul(0)
 
     def minimise(self, f: PolynomialFunction, D: FloatDPExactBox) -> ValidatedNumber:
-        solver = IntervalNewtonSolver(1e-8, 6)
+        solver = IntervalNewtonSolver(1e-8, 12)
         function, domain = _convert_problem(f=f, D=D)
         solution = self._minimise_over_box(solver=solver, function=function, domain=domain)
 
-        return ValidatedNumber(solution)
+        return ValidatedNumber(1/solution)

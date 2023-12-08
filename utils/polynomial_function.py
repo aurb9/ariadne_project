@@ -179,7 +179,7 @@ class PolynomialFunction:
         x = LiteralExpression(expression="*".join([f"x{i}" for i in range(self._n_variables)]))
         function_as_literal_expressions = {}
         for expression in self._function_as_literal_expressions.values():
-            new_expression = expression / x
+            new_expression = expression.one_over_x()
             function_as_literal_expressions[new_expression.format] = new_expression
 
         result = PolynomialFunction.__new__(

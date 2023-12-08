@@ -18,7 +18,8 @@ def _format_expression(expression) -> str:
     expression = re.sub(r"/pow\((\w+),(\w+)\)", r"*pow(\1,-\2)", expression)
     expression = re.sub(r"/x(\d+)", r"*pow(x\1,-1)", expression)
     expression = re.sub(r"(\w+)\*\*(\d+)", r"pow(\1,\2)", expression)
-    expression = re.sub(r"(w+)\*(d+)", r"\2*x\1", expression)
+    expression = re.sub(r"(-?\d+)\*(.*)", r"\2*\1", expression)
+    expression = re.sub(r"\*1", r"", expression)
 
     return expression
 
@@ -62,17 +63,10 @@ class LiteralExpression:
             self._case_single_x(expression=x)
 
     def _case_single_x(self, expression: str) -> None:
-        if expression == "0":
-            return
-
         if "x" in expression:
+            self._coefficient += 1
             index = int(re.search(r"x(\d+)", expression).group(1))
-            if not self._coefficient:
-                self._coefficient = 1
             self._powers[index] = 1
-            if "*" in expression:
-                coefficient = int(re.search(r"(-?\d+)\*", expression).group(1))
-                self._coefficient = coefficient
             if "pow" in expression:
                 power = int(re.search(rf"pow\(x{index},(-?\d+)\)", expression).group(1))
                 self._powers[index] = power
@@ -85,13 +79,16 @@ class LiteralExpression:
             if "." in expression:
                 self._coefficient = Decimal(expression)
             else:
-                self._coefficient = int(expression)
+                coefficient = int(expression)
+                if not self._coefficient:
+                    self._coefficient = coefficient
+                else:
+                    self._coefficient *= coefficient
 
     def __init__(self, expression: str) -> None:
         expression = _format_expression(expression=expression)
         self._powers = {}
         self._case_multiple_x(expression=expression)
-
         self._expression_format = _get_expression_format(powers=self._powers)
 
     def __new__(
@@ -196,6 +193,14 @@ class LiteralExpression:
 
         self_reciprocal = self._reciprocal()
         result = self_reciprocal.__mul__(other=other)
+        return result
+
+    def one_over_x(self) -> "LiteralExpression":
+        result = LiteralExpression.__new__(
+            cls=LiteralExpression,
+            coefficient=self._coefficient,
+            powers={k: -power for k, power in self._powers.items()}
+        )
         return result
 
     @property
