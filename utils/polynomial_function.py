@@ -22,9 +22,9 @@ class PolynomialFunction:
     _n_variables: int
     _function_as_literal_expressions: Dict[str, LiteralExpression]
 
-    def __init__(self, n_variables: int, f: str) -> None:
+    def __init__(self, n_variables: int, f: Union[str, Function]) -> None:
         self._n_variables = n_variables
-        self._function_as_literal_expressions = _convert_function_to_literal_expressions(function_str=f)
+        self._function_as_literal_expressions = _convert_function_to_literal_expressions(f=f)
 
     def __new__(
         cls,

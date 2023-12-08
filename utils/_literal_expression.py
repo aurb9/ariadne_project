@@ -57,11 +57,14 @@ class LiteralExpression:
     _powers: Dict[int, float] = None
 
     def _case_multiple_x(self, expression: str) -> None:
-        expressions = re.split(r"\*", expression) if expression.count("x") > 1 else [expression]
+        expressions = re.split(r"\*", expression)
         for x in expressions:
             self._case_single_x(expression=x)
 
     def _case_single_x(self, expression: str) -> None:
+        if expression == "0":
+            return
+
         if "x" in expression:
             index = int(re.search(r"x(\d+)", expression).group(1))
             if not self._coefficient:
@@ -87,10 +90,7 @@ class LiteralExpression:
     def __init__(self, expression: str) -> None:
         expression = _format_expression(expression=expression)
         self._powers = {}
-        if expression.count("x") > 1:
-            self._case_multiple_x(expression=expression)
-        else:
-            self._case_single_x(expression=expression)
+        self._case_multiple_x(expression=expression)
 
         self._expression_format = _get_expression_format(powers=self._powers)
 
@@ -212,4 +212,7 @@ class LiteralExpression:
 
     @property
     def degree(self) -> Union[int, float]:
+        if not self._powers:
+            return 0
+
         return max(self._powers.values())
