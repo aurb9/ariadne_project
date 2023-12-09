@@ -32,10 +32,10 @@ DOMAIN_1 = FloatDPExactBox([(-INF, "-1")])
 DOMAIN_2 = FloatDPExactBox([(-1, 1)])
 DOMAIN_3 = FloatDPExactBox([(1, INF)])
 
-CASE_1 = False #opt in DOMAIN_1
+CASE_1 = True #opt in DOMAIN_1
 CASE_2 = True #opt in DOMAIN_3
-CASE_3 = False #opt in DOMAIN_2 #THIS CASE DOES NOT WORK, see below
-CASE_4 = False #opt in DOMAIN_2
+CASE_3 = True #opt in DOMAIN_2
+CASE_4 = True #opt in DOMAIN_2
 
 if CASE_1:
     ## f(x) = x^2 + 2x
@@ -48,9 +48,9 @@ if CASE_1:
     # Combine all solutions and check them
     all_solutions = [opt1, opt2, opt3]
     verified_global_solution = final_solution(all_solutions)
-    print('Verified global solution:', verified_global_solution)
+    print('Verified global solution CASE 1:', verified_global_solution)
 
-elif CASE_2:
+if CASE_2:
     ## f(x) = 2x^2 -6x + 5
     ## f'(x) = 4x - 6 = 0 --> x_star = 3/2
     f = PolynomialFunction(n_variables=1, f="[2*x[0]**2-6*x[0]+5]")
@@ -61,11 +61,9 @@ elif CASE_2:
     # Combine all solutions and check them
     all_solutions = [opt1, opt2, opt3]
     verified_global_solution = final_solution(all_solutions)
-    print('Verified global solution:', verified_global_solution)
+    print('Verified global solution CASE 2:', verified_global_solution)
 
-elif CASE_3: #THIS EXAMPLE DOES NOT WORK
-#TODO: CASE_3 does not work, although the Function conversion is correct and the intervals are too.
-#It is a similar one to CASE_1
+if CASE_3:
     ## f(x) = 5x^2 -2x + 10
     ## f'(x) = 10x -2 = 0 --> x_star = 2/10
     f = PolynomialFunction(n_variables=1, f="[5*x[0]**2-2*x[0]+10]")
@@ -76,9 +74,9 @@ elif CASE_3: #THIS EXAMPLE DOES NOT WORK
     # Combine all solutions and check them
     all_solutions = [opt1, opt2, opt3]
     verified_global_solution = final_solution(all_solutions)
-    print('Verified global solution:', verified_global_solution)
+    print('Verified global solution CASE 3:', verified_global_solution)
 
-elif CASE_4:
+if CASE_4:
     ## f(x) = 3x^2 -3x + 1
     ## f'(x) = 6x -3 = 0 --> x_star = 3/6 = 1/2
     f = PolynomialFunction(n_variables=1, f="[3*x[0]**2-3*x[0]+1]")
@@ -89,6 +87,4 @@ elif CASE_4:
     # Combine all solutions and check them
     all_solutions = [opt1, opt2, opt3]
     verified_global_solution = final_solution(all_solutions)
-    print('Verified global solution:', verified_global_solution)
-else:
-    print('Please enable an example of polynomial')
+    print('Verified global solution CASE 4:', verified_global_solution)

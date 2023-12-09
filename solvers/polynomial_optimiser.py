@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from pyariadne import FloatDPBounds, nul
+from pyariadne import FloatDPBounds
 from pyariadne import FloatDPExactBox
 from pyariadne import dp
 from pyariadne import FloatDP
@@ -76,14 +76,15 @@ class PolynomialOptimiser:
         if solutions:
             return min(solutions)[0]
 
-        return nul(0)
+        return FloatDP.nan(dp)
 
     def minimise(self, f: PolynomialFunction, D: FloatDPExactBox, convert_problem: bool = True) -> ValidatedNumber:
         solver = IntervalNewtonSolver(1e-8, 12)
         if convert_problem:
             f, D = _convert_problem(f=f, D=D)
-        print('q:', f)
-        print('D_n:', D)
-        solution = self._minimise_over_box(solver=solver, function=f, domain=D)
-        #print(solution)
-        return ValidatedNumber(1/solution)
+            solution = self._minimise_over_box(solver=solver, function=f, domain=D)
+            return ValidatedNumber(1 / solution)
+        else:
+            f = PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(0))
+            solution = self._minimise_over_box(solver=solver, function=f, domain=D)
+            return ValidatedNumber(solution)
