@@ -82,8 +82,8 @@ class PolynomialOptimiser:
         solver = IntervalNewtonSolver(1e-8, 12)
         if convert_problem:
             f, D = _convert_problem(f=f, D=D)
-        #print('q:', function)
-        #print('D_n:', domain)
+        print('q:', f)
+        print('D_n:', D)
         solution = self._minimise_over_box(solver=solver, function=f, domain=D)
         #print(solution)
         return ValidatedNumber(1/solution)
