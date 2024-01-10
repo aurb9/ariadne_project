@@ -1,3 +1,4 @@
+from typing import List
 from typing import Tuple
 
 from pyariadne import FloatDPBounds
@@ -10,6 +11,8 @@ from pyariadne import ValidatedNumber
 from pyariadne import ValidatedVectorMultivariateFunction
 
 from utils.polynomial_function import PolynomialFunction
+
+# TODO: add branch and bound and look at the test.py file
 
 
 ZERO = FloatDP(0, dp)
@@ -54,23 +57,20 @@ def _box_reciprocal(box: FloatDPExactBox) -> FloatDPExactBox:
     return new_box
 
 
-def _convert_problem(f: PolynomialFunction, D: FloatDPExactBox) -> Tuple[PolynomialFunction, FloatDPExactBox]:
-    assert f.n_variables == 1, "PolynomialOptimiser can only deal with function with one variable."  # TODO: not sure?
-
-    degree = f.degree - 1
-    x_power_degree = PolynomialFunction(n_variables=f.n_variables, f=f"[x[0]**{degree}]")
-    f_derivative = PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(0))
+def _convert_problem_with_respect_to_nth_variable(f: PolynomialFunction, n: int) -> PolynomialFunction:
+    max_degree = f.max_degree_nth_variable(n=n) - 1
+    x_power_degree = PolynomialFunction(n_variables=f.n_variables, f=f"[x[{n}**{max_degree}]")
+    f_derivative = PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(n))
     q = x_power_degree * f_derivative.evaluate_at_one_over_x()
 
-    domain_reciprocal = _box_reciprocal(box=D)
-
-    return q, domain_reciprocal
+    return q
 
 
 class PolynomialOptimiser:
     def _minimise_over_box(
-        self, solver: IntervalNewtonSolver, function: PolynomialFunction, domain: FloatDPExactBox
+        self, solver: IntervalNewtonSolver, system_of_equations: List[PolynomialFunction], domain: FloatDPExactBox
     ) -> FloatDPBounds:
+        # TODO: solve system of linear equations
         function_to_minimise = ValidatedVectorMultivariateFunction(function.function)
         solutions = solver.solve_all(function_to_minimise, domain)
         if solutions:
@@ -80,11 +80,22 @@ class PolynomialOptimiser:
 
     def minimise(self, f: PolynomialFunction, D: FloatDPExactBox, convert_problem: bool = True) -> ValidatedNumber:
         solver = IntervalNewtonSolver(1e-8, 12)
-        if convert_problem:
-            f, D = _convert_problem(f=f, D=D)
-            solution = self._minimise_over_box(solver=solver, function=f, domain=D)
-            return ValidatedNumber(1 / solution)
-        else:
-            f = PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(0))
-            solution = self._minimise_over_box(solver=solver, function=f, domain=D)
-            return ValidatedNumber(solution)
+        system_of_equations_to_solve = []
+        for n in range(f.n_variables):
+            system_of_equations_to_solve.append(
+                _convert_problem_with_respect_to_nth_variable(f=f, n=n) if convert_problem
+                else PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(n))
+            )
+
+        domain = _box_reciprocal(box=D) if convert_problem else D
+        solution = self._minimise_over_box(
+            solver=solver, system_of_equations=system_of_equations_to_solve, domain=domain
+        )
+        solution = ValidatedNumber(1 / solution) if convert_problem else ValidatedNumber(solution)
+
+        return solution
+
+
+f = PolynomialFunction(n_variables=2, f="[-2*x[0]+x[0]**2+100*x[1]**2-200*x[1]*x[0]**2+100*x[0]**4+1]")  # Min should be at (1, 1)
+opt = PolynomialOptimiser()
+opt.minimise(f, D=FloatDPExactBox([(-FloatDP.inf(dp), "-1")]), convert_problem=True)

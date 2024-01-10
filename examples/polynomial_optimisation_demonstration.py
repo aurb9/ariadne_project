@@ -46,8 +46,8 @@ DOMAIN_1 = FloatDPExactBox([(-INF, "-1")])
 DOMAIN_2 = FloatDPExactBox([(-1, 1)])
 DOMAIN_3 = FloatDPExactBox([(1, INF)])
 
-f = PolynomialFunction(n_variables=1, f="[x[0]**2+2*x[0]]") # GREEN GRAPH
-#f = PolynomialFunction(n_variables=1, f="[2*x[0]**2-6*x[0]+5]") # BLUE GRAPH
+# f = PolynomialFunction(n_variables=1, f="[x[0]**2+2*x[0]]") # GREEN GRAPH
+f = PolynomialFunction(n_variables=1, f="[2*x[0]**2-6*x[0]+5]") # BLUE GRAPH
 
 opt1 = solver.minimise(f=f, D=DOMAIN_1)
 opt2 = solver.minimise(f=f, D=DOMAIN_2, convert_problem=False)
@@ -56,5 +56,4 @@ opt3 = solver.minimise(f=f, D=DOMAIN_3)
 # Combine all solutions and check them
 all_solutions = [opt1, opt2, opt3]
 x_global, fx_global = final_solution(f, all_solutions)
-print('Global minimum x:', x_global)
-print('Global minimum f(x): ', fx_global)
+print(f'Global minimum x = {x_global} with f(x) = {fx_global}')

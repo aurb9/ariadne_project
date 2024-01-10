@@ -3,6 +3,7 @@ from typing import Dict
 from typing import Optional
 from typing import Union
 
+from pyariadne import Decimal
 from pyariadne import Function
 
 from utils._convert_function_as_literal_expressions_to_function import (
@@ -106,6 +107,10 @@ class PolynomialFunction:
 
         return result
 
+    # TODO
+    # def __radd__(self, other: Any) -> "PolynomialFunction":
+    #     return PolynomialFunction()
+
     def __sub__(self, other: Any) -> "PolynomialFunction":
         return self.__add__(other=-other)
 
@@ -204,3 +209,26 @@ class PolynomialFunction:
     def degree(self) -> Union[int, float]:
         degrees = [expression.degree for expression in self._function_as_literal_expressions.values()]
         return max(degrees)
+
+    def max_degree_nth_variable(self, n: int) -> float:
+        assert n < self._n_variables, f"{n}th variable does not exist, there are at most {self._n_variables} variables"
+        values_containing_n = [
+            expression.powers for format, expression in self._function_as_literal_expressions.items()
+            if str(n) in format
+        ]
+        max_degree = max([x[n] for x in values_containing_n])
+
+        return max_degree
+
+    # TODO: need to define constant and coordinate functions!
+    # def f(x) ...
+    # p = [p0, p1] and then can do f(p), which gives p0 + 2*p1 for instance
+    @staticmethod
+    def coordinate(self, n: int, i: int):
+        # n variables, and i index
+        # return function?
+        pass
+
+    @staticmethod
+    def constant(c: Decimal) -> "PolynomialFunction":
+        return PolynomialFunction(n_variables=0, f=[c])

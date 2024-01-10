@@ -19,7 +19,7 @@ def _format_expression(expression) -> str:
     expression = re.sub(r"/x(\d+)", r"*pow(x\1,-1)", expression)
     expression = re.sub(r"(\w+)\*\*(\d+)", r"pow(\1,\2)", expression)
     expression = re.sub(r"(-?\d+)\*(.*)", r"\2*\1", expression)
-    expression = re.sub(r"\*1", r"", expression)
+    expression = re.sub(r"\*1$", r"", expression)
 
     return expression
 
@@ -54,7 +54,7 @@ def _get_expression_format(powers: Dict[int, float]) -> str:
 
 class LiteralExpression:
     _expression_format: str
-    _coefficient: int = 0  # TODO: further allow floats?
+    _coefficient: int = 1  # TODO: further allow floats?
     _powers: Dict[int, float] = None
 
     def _case_multiple_x(self, expression: str) -> None:
@@ -64,7 +64,6 @@ class LiteralExpression:
 
     def _case_single_x(self, expression: str) -> None:
         if "x" in expression:
-            self._coefficient += 1
             index = int(re.search(r"x(\d+)", expression).group(1))
             self._powers[index] = 1
             if "pow" in expression:
