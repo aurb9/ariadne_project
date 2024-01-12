@@ -120,8 +120,9 @@ class PolynomialOptimiser:
         solution = self.find_roots_of_q_over_box(
             solver=solver, system_of_equations=f_to_optimise, domain=domain
         )
-
-        if len(solution) > 1:
+        if type(solution) == FloatDP:
+            solution = solution #this could also be removed technically, but kept in for safety
+        elif len(solution) > 1:
             solution = multiple_solutions(solution)
         else:
             solution = solution[0][0]
