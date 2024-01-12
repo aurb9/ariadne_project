@@ -9,6 +9,7 @@ from pyariadne import FloatDPExactInterval
 from pyariadne import IntervalNewtonSolver
 from pyariadne import ValidatedNumber
 from pyariadne import ValidatedVectorMultivariateFunction
+from pyariadne import evaluate
 
 from utils.polynomial_function import PolynomialFunction
 
@@ -41,6 +42,27 @@ def _convert_single_box(box: FloatDPExactInterval) -> Tuple[FloatDP, FloatDP]:
     new_box_upper_bound = new_box_upper_bound.lower().raw()
 
     return new_box_lower_bound, new_box_upper_bound
+
+def multiple_solutions(solutions):
+    """
+    When there are multiple solutions found by the Interval Newton Solver (INS),
+    we need to ensure the lowest function value is returned.
+    :param solutions: multiple solutions for the root
+    :return: location_min which is the location of the lowest minima in the solutions
+    """
+
+    total_min = FloatDP.inf(dp)
+    location_min = None
+    for sol in solutions:
+        print(sol)
+        f_val = evaluate(f.function, sol)[0].value()  # hard-coded 0 for 1D problem
+        print('Function at point:', f_val)
+        if f_val < total_min:
+            total_min = f_val
+            location_min = sol
+        print('Total min:', total_min)
+        print('Location min:', location_min)
+    return location_min[0]
 
 # TODO: this should go to utils
 def _box_reciprocal(box: FloatDPExactBox) -> FloatDPExactBox:
@@ -98,9 +120,24 @@ class PolynomialOptimiser:
         solution = self.find_roots_of_q_over_box(
             solver=solver, system_of_equations=f_to_optimise, domain=domain
         )
-        solution = ValidatedNumber(1 / solution) if convert_problem else ValidatedNumber(solution)
 
-        return solution
+        if convert_problem:
+            if type(solution) == FloatDP:
+                return ValidatedNumber(1 / solution)
+            elif len(solution) > 1:
+                return ValidatedNumber(1 / multiple_solutions(solution))
+            else:
+                return ValidatedNumber(1 / solution[0][0])
+        else:
+            if type(solution) == FloatDP:
+                return ValidatedNumber(solution)
+            elif len(solution) > 1:
+                return ValidatedNumber(multiple_solutions(solution))
+            else:
+                return ValidatedNumber(solution[0][0])
+
+        #solution = ValidatedNumber(1 / solution) if convert_problem else ValidatedNumber(solution)
+        #return solution
 
 f = PolynomialFunction(n_variables=2, f="[x[0]]")
 # f = PolynomialFunction(n_variables=2, f="[-2*x[0]+x[0]**2+100*x[1]**2-200*x[1]*x[0]**2+100*x[0]**4+1]")  # Min should be at (1, 1)
