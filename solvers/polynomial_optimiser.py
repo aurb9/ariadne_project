@@ -121,23 +121,13 @@ class PolynomialOptimiser:
             solver=solver, system_of_equations=f_to_optimise, domain=domain
         )
 
-        if convert_problem:
-            if type(solution) == FloatDP:
-                return ValidatedNumber(1 / solution)
-            elif len(solution) > 1:
-                return ValidatedNumber(1 / multiple_solutions(solution))
-            else:
-                return ValidatedNumber(1 / solution[0][0])
+        if len(solution) > 1:
+            solution = multiple_solutions(solution)
         else:
-            if type(solution) == FloatDP:
-                return ValidatedNumber(solution)
-            elif len(solution) > 1:
-                return ValidatedNumber(multiple_solutions(solution))
-            else:
-                return ValidatedNumber(solution[0][0])
+            solution = solution[0][0]
 
-        #solution = ValidatedNumber(1 / solution) if convert_problem else ValidatedNumber(solution)
-        #return solution
+        solution = ValidatedNumber(1 / solution) if convert_problem else ValidatedNumber(solution)
+        return solution
 
 f = PolynomialFunction(n_variables=2, f="[x[0]]")
 # f = PolynomialFunction(n_variables=2, f="[-2*x[0]+x[0]**2+100*x[1]**2-200*x[1]*x[0]**2+100*x[0]**4+1]")  # Min should be at (1, 1)
