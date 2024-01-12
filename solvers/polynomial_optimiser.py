@@ -1,7 +1,7 @@
 from typing import List
 from typing import Tuple
 
-from pyariadne import FloatDPBounds
+from pyariadne import FloatDPBounds, EffectiveVectorMultivariateFunction
 from pyariadne import FloatDPExactBox
 from pyariadne import dp
 from pyariadne import FloatDP
@@ -42,37 +42,46 @@ def _convert_single_box(box: FloatDPExactInterval) -> Tuple[FloatDP, FloatDP]:
 
     return new_box_lower_bound, new_box_upper_bound
 
-
+# TODO: this should go to utils
 def _box_reciprocal(box: FloatDPExactBox) -> FloatDPExactBox:
     """
     Converting the entire domain to 1/domain by going over every subdomain and converting that
     :param box: a box containing the domain (can be single or multiple)
     :return: the new_domain which is 1/input_domain
     """
-    sub_boxes = []
-    for dim_i in range(box.dimension()):
-        sub_boxes.append(_convert_single_box(box[dim_i]))
-
+    sub_boxes = [_convert_single_box(box[x]) for x in range(box.dimension())]
     new_box = FloatDPExactBox(sub_boxes)
+
     return new_box
 
 
-def _convert_problem_with_respect_to_nth_variable(f: PolynomialFunction, n: int) -> PolynomialFunction:
-    max_degree = f.max_degree_nth_variable(n=n) - 1
-    x_power_degree = PolynomialFunction(n_variables=f.n_variables, f=f"[x[{n}**{max_degree}]")
-    f_derivative = PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(n))
-    q = x_power_degree * f_derivative.evaluate_at_one_over_x()
+def _convert_problem(
+    f: PolynomialFunction, D: FloatDPExactBox
+) -> Tuple[EffectiveVectorMultivariateFunction, FloatDPExactBox]:
+    q_by_variable = []
+    for n in range(f.n_variables):
+        max_degree = f.max_degree_nth_variable(n=n) - 1
+        x_power_degree = PolynomialFunction(n_variables=f.n_variables, f=f"[x[{n}**{max_degree}]")
+        f_derivative = PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(n))
+        q = x_power_degree * f_derivative.evaluate_at_one_over_x()
+        q_by_variable.append(q.function)
 
-    return q
+    functions_to_optimise = EffectiveVectorMultivariateFunction(q_by_variable)
+
+    domain = _box_reciprocal(box=D)
+
+    return functions_to_optimise, domain
 
 
 class PolynomialOptimiser:
-    def _minimise_over_box(
-        self, solver: IntervalNewtonSolver, system_of_equations: List[PolynomialFunction], domain: FloatDPExactBox
+    @staticmethod
+    def find_roots_of_q_over_box(
+        solver: IntervalNewtonSolver,
+        system_of_equations: EffectiveVectorMultivariateFunction,
+        domain: FloatDPExactBox
     ) -> FloatDPBounds:
-        # TODO: solve system of linear equations
-        function_to_minimise = ValidatedVectorMultivariateFunction(function.function)
-        solutions = solver.solve_all(function_to_minimise, domain)
+        # TODO: here we should branch and bound (if we use our own solver :))
+        solutions = solver.solve_all(system_of_equations, domain)
         if solutions:
             return min(solutions)[0]
 
@@ -80,22 +89,20 @@ class PolynomialOptimiser:
 
     def minimise(self, f: PolynomialFunction, D: FloatDPExactBox, convert_problem: bool = True) -> ValidatedNumber:
         solver = IntervalNewtonSolver(1e-8, 12)
-        system_of_equations_to_solve = []
-        for n in range(f.n_variables):
-            system_of_equations_to_solve.append(
-                _convert_problem_with_respect_to_nth_variable(f=f, n=n) if convert_problem
-                else PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(n))
-            )
+        if convert_problem:
+            f_to_optimise, domain = _convert_problem(f=f, D=D)
+        else:
+            f_to_optimise = f.function.derivative(0)
 
         domain = _box_reciprocal(box=D) if convert_problem else D
-        solution = self._minimise_over_box(
-            solver=solver, system_of_equations=system_of_equations_to_solve, domain=domain
+        solution = self.find_roots_of_q_over_box(
+            solver=solver, system_of_equations=f_to_optimise, domain=domain
         )
         solution = ValidatedNumber(1 / solution) if convert_problem else ValidatedNumber(solution)
 
         return solution
 
-
-f = PolynomialFunction(n_variables=2, f="[-2*x[0]+x[0]**2+100*x[1]**2-200*x[1]*x[0]**2+100*x[0]**4+1]")  # Min should be at (1, 1)
+f = PolynomialFunction(n_variables=2, f="[x[0]]")
+# f = PolynomialFunction(n_variables=2, f="[-2*x[0]+x[0]**2+100*x[1]**2-200*x[1]*x[0]**2+100*x[0]**4+1]")  # Min should be at (1, 1)
 opt = PolynomialOptimiser()
 opt.minimise(f, D=FloatDPExactBox([(-FloatDP.inf(dp), "-1")]), convert_problem=True)

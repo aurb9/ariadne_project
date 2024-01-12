@@ -1,28 +1,28 @@
 from typing import Any
 from typing import Dict
+from typing import List
 from typing import Optional
 from typing import Union
 
-from pyariadne import Decimal
 from pyariadne import Function
+from pyariadne import Real
 
 from utils._convert_function_as_literal_expressions_to_function import (
     convert_function_as_literal_expressions_to_function
 )
 from utils._convert_function_to_literal_expressions import convert_function_to_literal_expressions
-from utils._literal_expression import LiteralExpression
+from utils._literal_expression_with_coordinates import LiteralExpression
 from utils._scalar import is_scalar
 from utils.set_operations import get_joint_and_disjoint_sets
 
 _OPERATION_NOT_POSSIBLE_ERROR_MESSAGE = f"Operation not possible for objects of type PolynomialFunction and "
 
 
-# TODO: change to use coordinates --> dict of powers as keys and coefficients as values
-
 class PolynomialFunction:
     # TODO: this should extend Function but it seems like it just constructs the ariadne object
     #  without running this code...
     _n_variables: int
+    _coordinates: Dict[List[int], Real]
     _function_as_literal_expressions: Dict[str, LiteralExpression]
 
     def __init__(self, n_variables: int, f: Union[str, Function]) -> None:
@@ -45,7 +45,7 @@ class PolynomialFunction:
 
     def __repr__(self) -> str:
         f = convert_function_as_literal_expressions_to_function(
-            function_as_literal_expressions=self._function_as_literal_expressions
+            n_variables=self._n_variables, function_as_literal_expressions=self._function_as_literal_expressions
         )
         return Function(self._n_variables, f).__repr__()
 
@@ -183,11 +183,10 @@ class PolynomialFunction:
         return result
 
     def evaluate_at_one_over_x(self) -> "PolynomialFunction":
-        x = LiteralExpression(expression="*".join([f"x{i}" for i in range(self._n_variables)]))
         function_as_literal_expressions = {}
         for expression in self._function_as_literal_expressions.values():
             new_expression = expression.one_over_x()
-            function_as_literal_expressions[new_expression.format] = new_expression
+            function_as_literal_expressions[new_expression.powers] = new_expression.coefficient
 
         result = PolynomialFunction.__new__(
             cls=PolynomialFunction,
@@ -222,15 +221,13 @@ class PolynomialFunction:
 
         return max_degree
 
-    # TODO: need to define constant and coordinate functions!
-    # def f(x) ...
-    # p = [p0, p1] and then can do f(p), which gives p0 + 2*p1 for instance
-    @staticmethod
-    def coordinate(self, n: int, i: int):
-        # n variables, and i index
-        # return function?
-        pass
+    # TODO
+    # @staticmethod
+    # def coordinate(n: int, i: int):
+    #     # n variables, and i index
+    #     # return function?
+    #     pass
 
     @staticmethod
-    def constant(c: Decimal) -> "PolynomialFunction":
-        return PolynomialFunction(n_variables=0, f=[c])
+    def constant(c: Real) -> "PolynomialFunction":
+        return PolynomialFunction(n_variables=0, f=str(c))

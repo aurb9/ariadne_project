@@ -6,7 +6,7 @@ from pyariadne import Function
 from utils._literal_expression import LiteralExpression
 
 
-def _convert_function_to_literal_expressions(f: Union[str, Function]) -> Dict[str, LiteralExpression]:
+def convert_function_to_literal_expressions(f: Union[str, Function]) -> Dict[str, LiteralExpression]:
     function_str = f if isinstance(f, str) else f.__crepr__()
     function_str = (
         function_str

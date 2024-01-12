@@ -6,8 +6,8 @@ from pyariadne import sqr
 from utils._literal_expression import LiteralExpression
 
 
-def _convert_function_as_literal_expressions_to_function(
-    function_as_literal_expressions: Dict[str, LiteralExpression]
+def convert_function_as_literal_expressions_to_function(
+    n_variables: int, function_as_literal_expressions: Dict[str, LiteralExpression]
 ) -> callable:
     elements_to_add = []
     for expression in function_as_literal_expressions.values():
@@ -38,7 +38,10 @@ def _convert_function_as_literal_expressions_to_function(
 
         elements_to_add.append("*".join(elements_to_multiply))
 
-    function_as_string = "lambda x: [" + "+".join(elements_to_add) + "]"
+    function_as_string = "+".join(elements_to_add)
+    if n_variables > 1:
+        function_as_string = "[" + function_as_string + "]"
+    function_as_string = "lambda x: " + function_as_string
     function = eval(function_as_string)
 
     return function
