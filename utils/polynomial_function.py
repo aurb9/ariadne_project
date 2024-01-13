@@ -1,146 +1,120 @@
 from typing import Any
-from typing import Dict
+from typing import List
 from typing import Optional
 from typing import Union
 
-from pyariadne import Decimal
+from pyariadne import Dyadic
 from pyariadne import Function
+from pyariadne import Rational
 
-from utils._convert_function_as_literal_expressions_to_function import (
-    convert_function_as_literal_expressions_to_function
+from utils._convert_coordinates_to_function import (
+    convert_coordinates_to_function
 )
-from utils._convert_function_to_literal_expressions import convert_function_to_literal_expressions
-from utils._literal_expression import LiteralExpression
+from utils._convert_function_to_coordinates import convert_function_to_coordinates
+from utils._coordinate import Coordinate
 from utils._scalar import is_scalar
-from utils.set_operations import get_joint_and_disjoint_sets
 
 _OPERATION_NOT_POSSIBLE_ERROR_MESSAGE = f"Operation not possible for objects of type PolynomialFunction and "
 
 
-# TODO: change to use coordinates --> dict of powers as keys and coefficients as values
-
 class PolynomialFunction:
-    # TODO: this should extend Function but it seems like it just constructs the ariadne object
-    #  without running this code...
     _n_variables: int
-    _function_as_literal_expressions: Dict[str, LiteralExpression]
+    _coordinates: List[Coordinate]
 
     def __init__(self, n_variables: int, f: Union[str, Function]) -> None:
         self._n_variables = n_variables
-        self._function_as_literal_expressions = convert_function_to_literal_expressions(f=f)
+        self._coordinates = convert_function_to_coordinates(n_variables=self._n_variables, f=f)
 
     def __new__(
         cls,
         n_variables: int,
         f: Optional[callable] = None,
-        function_as_literal_expressions: Optional[Dict[str, LiteralExpression]] = None
+        coordinates: Optional[List[Coordinate]] = None
     ) -> "PolynomialFunction":
-        if function_as_literal_expressions is not None:
+        if coordinates is not None:
             instance = super(PolynomialFunction, cls).__new__(cls)
             instance._n_variables = n_variables
-            instance._function_as_literal_expressions = function_as_literal_expressions
+            instance._coordinates = coordinates
             return instance
         else:
             return super(PolynomialFunction, cls).__new__(cls)
 
     def __repr__(self) -> str:
-        f = convert_function_as_literal_expressions_to_function(
-            function_as_literal_expressions=self._function_as_literal_expressions
-        )
-        return Function(self._n_variables, f).__repr__()
+        return self.function.__repr__()
 
     def __call__(self, x: Any) -> Any:
-        return self.function(x)
+        if is_scalar(x=x):
+            return self.function(x)
+        elif isinstance(x, PolynomialFunction):
+            pass
+        else:
+            raise Exception(f"'PolynomialFunction' object is not callable with object of type {type(x)}")
 
     def __neg__(self) -> "PolynomialFunction":
-        function_as_literal_expressions = {}
-        for expression_format, expression_literal in self._function_as_literal_expressions.items():
-            new_expression = -expression_literal
-            function_as_literal_expressions[expression_format] = new_expression
-
+        coordinates = [-x for x in self._coordinates]
         return PolynomialFunction.__new__(
             cls=PolynomialFunction,
             n_variables=self._n_variables,
-            function_as_literal_expressions=function_as_literal_expressions
+            coordinates=coordinates
         )
 
     def __add__(self, other: Any) -> "PolynomialFunction":
-        function_as_literal_expressions = {}
+        coordinates = self._coordinates.copy()
         if is_scalar(x=other):
-            function_as_literal_expressions = self._function_as_literal_expressions.copy()
-            other_as_literal_expression = LiteralExpression(expression=str(other))
-            if "" in self._function_as_literal_expressions.keys():
-                function_as_literal_expressions[""] = (
-                    self._function_as_literal_expressions[""] + other_as_literal_expression
-                )
-            else:
-                function_as_literal_expressions[""] = other_as_literal_expression
+            other_coordinate = Coordinate(n_variables=self._n_variables, expression=str(other))
+            constant_coordinate = (0 for _ in range(self._n_variables))
+            did_update = False
+            for i, x in enumerate(coordinates):
+                if x.powers == constant_coordinate:
+                    coordinates[i] = x + other_coordinate
+                    did_update = True
+                    break
 
-            result = PolynomialFunction.__new__(
-                cls=PolynomialFunction,
-                n_variables=self._n_variables,
-                function_as_literal_expressions=function_as_literal_expressions
-            )
+            if not did_update:
+                coordinates.append(other_coordinate)
 
         elif isinstance(other, PolynomialFunction):
-            self_literal_expressions = set(self._function_as_literal_expressions.keys())
-            other_literal_expressions = set(other._function_as_literal_expressions.keys())
-            common_literal_expressions, missing_self_expressions, missing_other_expressions = (
-                get_joint_and_disjoint_sets(self_literal_expressions, other_literal_expressions)
-            )
-            for x in common_literal_expressions:
-                new_expression = self._function_as_literal_expressions[x] + other._function_as_literal_expressions[x]
-                function_as_literal_expressions[new_expression.format] = new_expression
-
-            for x in missing_self_expressions:
-                function_as_literal_expressions[x] = self._function_as_literal_expressions[x]
-
-            for x in missing_other_expressions:
-                function_as_literal_expressions[x] = other._function_as_literal_expressions[x]
-
-            result = PolynomialFunction.__new__(
-                cls=PolynomialFunction,
-                n_variables=max(self._n_variables, other._n_variables),
-                function_as_literal_expressions=function_as_literal_expressions
-            )
-
+            other_coordinates = other._coordinates
+            for y in other_coordinates:
+                did_update = False
+                for i, x in enumerate(coordinates):
+                    if x.powers == y.powers:
+                        coordinates[i] = x + y
+                        did_update = True
+                        break
+                if not did_update:
+                    coordinates.append(y)
         else:
             raise Exception(_OPERATION_NOT_POSSIBLE_ERROR_MESSAGE, type(other))
 
+        result = PolynomialFunction.__new__(
+            cls=PolynomialFunction,
+            n_variables=max(self._n_variables, other.n_variables),
+            coordinates=coordinates
+        )
         return result
 
-    # TODO
-    # def __radd__(self, other: Any) -> "PolynomialFunction":
-    #     return PolynomialFunction()
+    def __radd__(self, other: Any) -> "PolynomialFunction":
+        return self.__add__(other=other)
 
     def __sub__(self, other: Any) -> "PolynomialFunction":
         return self.__add__(other=-other)
 
     def __mul__(self, other: Any) -> "PolynomialFunction":
-        function_as_literal_expressions = {}
         if is_scalar(x=other):
-            for expression in self._function_as_literal_expressions.values():
-                new_expression = expression * other
-                function_as_literal_expressions[new_expression.format] = new_expression
-
+            coordinates = [x*other for x in self._coordinates]
             result = PolynomialFunction.__new__(
                 cls=PolynomialFunction,
                 n_variables=self._n_variables,
-                function_as_literal_expressions=function_as_literal_expressions
+                coordinates=coordinates
             )
-
         elif isinstance(other, PolynomialFunction):
-            for self_expression in self._function_as_literal_expressions.values():
-                for other_expression in other._function_as_literal_expressions.values():
-                    new_expression = self_expression * other_expression
-                    function_as_literal_expressions[new_expression.format] = new_expression
-
+            coordinates = [x * y for x in self._coordinates for y in other._coordinates]
             result = PolynomialFunction.__new__(
                 cls=PolynomialFunction,
                 n_variables=max(self._n_variables, other._n_variables),
-                function_as_literal_expressions=function_as_literal_expressions
+                coordinates=coordinates
             )
-
         else:
             raise Exception(_OPERATION_NOT_POSSIBLE_ERROR_MESSAGE, type(other))
 
@@ -150,22 +124,17 @@ class PolynomialFunction:
         return self.__mul__(other=other)
 
     def _reciprocal(self) -> "PolynomialFunction":
-        function_as_literal_expressions = {}
-        for expression in self._function_as_literal_expressions.values():
-            new_expression = 1/expression
-            function_as_literal_expressions[new_expression.format] = new_expression
-
+        coordinates = [1/x for x in self._coordinates]
         result = PolynomialFunction.__new__(
             cls=PolynomialFunction,
             n_variables=self._n_variables,
-            function_as_literal_expressions=function_as_literal_expressions
+            coordinates=coordinates
         )
         return result
 
-    # TODO: division does not support types x/(x + 1) for instance, it instead computes x/x + x/1
     def __truediv__(self, other: Any) -> "PolynomialFunction":
         if is_scalar(x=other):
-            other_reciprocal = int(1 / other)
+            other_reciprocal = Dyadic(Rational(1, other))
         elif isinstance(other, PolynomialFunction):
             other_reciprocal = other._reciprocal()
         else:
@@ -182,17 +151,13 @@ class PolynomialFunction:
         result = self_reciprocal.__mul__(other=other)
         return result
 
+    # TODO: eventually this should go to __call__
     def evaluate_at_one_over_x(self) -> "PolynomialFunction":
-        x = LiteralExpression(expression="*".join([f"x{i}" for i in range(self._n_variables)]))
-        function_as_literal_expressions = {}
-        for expression in self._function_as_literal_expressions.values():
-            new_expression = expression.one_over_x()
-            function_as_literal_expressions[new_expression.format] = new_expression
-
+        coordinates = [x.one_over_x() for x in self._coordinates]
         result = PolynomialFunction.__new__(
             cls=PolynomialFunction,
             n_variables=self._n_variables,
-            function_as_literal_expressions=function_as_literal_expressions
+            coordinates=coordinates
         )
         return result
 
@@ -202,35 +167,22 @@ class PolynomialFunction:
 
     @property
     def function(self) -> Function:
-        f = convert_function_as_literal_expressions_to_function(
-            n_variables=self.n_variables, function_as_literal_expressions=self._function_as_literal_expressions
-        )
+        f = convert_coordinates_to_function(function_as_coordinates=self._coordinates)
         return Function(self._n_variables, f)
 
-    @property
-    def degree(self) -> Union[int, float]:
-        degrees = [expression.degree for expression in self._function_as_literal_expressions.values()]
-        return max(degrees)
-
-    def max_degree_nth_variable(self, n: int) -> float:
+    def max_degree_nth_variable(self, n: int) -> int:
         assert n < self._n_variables, f"{n}th variable does not exist, there are at most {self._n_variables} variables"
-        values_containing_n = [
-            expression.powers for format, expression in self._function_as_literal_expressions.items()
-            if str(n) in format
-        ]
-        max_degree = max([x[n] for x in values_containing_n])
 
+        max_degree = max([x.powers[n] for x in self._coordinates])
         return max_degree
 
-    # TODO: need to define constant and coordinate functions!
-    # def f(x) ...
-    # p = [p0, p1] and then can do f(p), which gives p0 + 2*p1 for instance
-    @staticmethod
-    def coordinate(self, n: int, i: int):
-        # n variables, and i index
-        # return function?
-        pass
+    # TODO
+    # @staticmethod
+    # def coordinate(n: int, i: int):
+    #     # n variables, and i index
+    #     # return function?
+    #     pass
 
     @staticmethod
-    def constant(c: Decimal) -> "PolynomialFunction":
-        return PolynomialFunction(n_variables=0, f=[c])
+    def constant(c: Any) -> "PolynomialFunction":
+        return PolynomialFunction(n_variables=0, f=str(c))
