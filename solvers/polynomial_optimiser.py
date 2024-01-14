@@ -1,4 +1,5 @@
-from typing import Tuple
+from typing import Tuple, List
+from itertools import product
 
 from pyariadne import dp
 from pyariadne import EffectiveVectorMultivariateFunction
@@ -79,10 +80,53 @@ class PolynomialOptimiser:
         solution = self.find_roots_of_q_over_box(
             solver=solver, system_of_equations=f_to_optimise, domain=domain
         )
-        if len(solution) > 1:
+        if type(solution) == FloatDP:
+            solution = solution  # this could also be removed technically, but kept in for safety
+        elif len(solution) > 1:
             solution = multiple_solutions(solution)
         else:
             solution = solution[0][0]
 
         solution = ValidatedNumber(1 / solution) if convert_problem else ValidatedNumber(solution)
         return solution
+
+    # TODO: implement technique when user knowns that the optimum is in a certain box
+    def minise_all(self, f: PolynomialFunction) -> List[ValidatedNumber]:
+        INF = FloatDP.inf(dp)
+        DIM = f.n_variables # Number of dimensions
+
+        # Split on 3 boxes (default)
+        box_1 = (-INF, -1)
+        box_2 = (-1, 1)
+        box_3 = (1, INF)
+        boxes = [box_1, box_2, box_3]
+
+        all_possible_boxes = list(product(boxes, repeat=DIM))
+
+        all_boxes = []
+        convert_list = [] # list with booleans whether or not to convert problem
+        for box_combination in all_possible_boxes:
+            subdomain = [comb_part for comb_part in box_combination]
+            box = FloatDPExactBox(subdomain)
+
+            # TODO: later we probably want to know which part of the subdomain needs to be converted
+            # But then we need to know how to convert when more than 1 part needs to be converted
+            if (subdomain.__contains__(box_1) or subdomain.__contains__(box_3)):
+                convert_list.append(True)
+            else:
+                convert_list.append(False)
+            # print(box)
+            all_boxes.append(box)
+        # print(len(all_boxes))  # boxes^dim
+
+        # Now that we know all boxes, we can use the default minimise function
+        assert (len(all_boxes) == len(convert_list))
+
+        optima = []
+        for i in range(len(all_boxes)):
+            d = all_boxes[i]
+            convert_problem = convert_list[i]
+            optimum = self.minimise(f=f, D=d, convert_problem=convert_problem)
+            optima.append(optimum)
+
+        return optima
