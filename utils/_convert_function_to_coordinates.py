@@ -7,7 +7,7 @@ from utils._coordinate import Coordinate
 
 
 def convert_function_to_coordinates(n_variables: int, f: Union[str, Function]) -> List[Coordinate]:
-    function_str = f if isinstance(f, str) else f.__crepr__()
+    function_str = f if isinstance(f, str) else str(f)
     function_str = (
         function_str
         .replace("-", "+-")
