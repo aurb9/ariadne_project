@@ -75,6 +75,5 @@ opt3 = solver.minimise(f=f, D=DOMAIN_3)
 
 # Combine all solutions and check them
 all_solutions = [opt1, opt2, opt3]
-# TODO: move final_solution method to optimiser instead of demo file.
 x_global, fx_global = final_solution(f, all_solutions)
 print(f'Global minimum x = {x_global} with f(x) = {fx_global}')
