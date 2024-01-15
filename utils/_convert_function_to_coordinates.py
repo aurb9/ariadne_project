@@ -20,7 +20,7 @@ def convert_function_to_coordinates(n_variables: int, f: Union[str, Function]) -
     for x in function_split_by_literals:
         x = x.lstrip("(").rstrip(")")
         coordinate = Coordinate(n_variables=n_variables, expression=x)
-        if coordinate:
+        if coordinate.powers:
             function_as_coordinate.append(coordinate)
 
     return function_as_coordinate

@@ -32,7 +32,7 @@ def _custom_sort(list_of_strings: List[str]) -> List[str]:
 
 
 class Coordinate:
-    _coefficient: Dyadic = Dyadic(1)
+    _coefficient: Dyadic = Dyadic("1")
     _powers: List[int] = None
 
     def _case_multiple_x(self, expression: str) -> None:
@@ -61,11 +61,11 @@ class Coordinate:
                     self._coefficient *= coefficient
 
     def __init__(self, n_variables: int, expression: str) -> None:
-        self._powers = [0 for _ in range(n_variables)]
         expression = _format_expression(expression=expression)
         if not expression or expression == "0" or "*0" in expression:
             return
 
+        self._powers = [0 for _ in range(n_variables)]
         self._case_multiple_x(expression=expression)
 
     def __new__(
