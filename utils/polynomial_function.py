@@ -6,6 +6,7 @@ from typing import Union
 from pyariadne import Dyadic
 from pyariadne import Function
 from pyariadne import Rational
+from pyariadne import ValidatedScalarMultivariateFunction
 
 from utils._convert_coordinates_to_function import (
     convert_coordinates_to_function
@@ -166,9 +167,12 @@ class PolynomialFunction:
         return self._n_variables
 
     @property
-    def function(self) -> Function:
+    def function(self) -> ValidatedScalarMultivariateFunction:
         f = convert_coordinates_to_function(function_as_coordinates=self._coordinates)
-        return Function(self._n_variables, f)
+        f = Function(self._n_variables, f)
+        validated_f = ValidatedScalarMultivariateFunction(f)
+
+        return validated_f
 
     def max_degree_nth_variable(self, n: int) -> int:
         assert n < self._n_variables, f"{n}th variable does not exist, there are at most {self._n_variables} variables"

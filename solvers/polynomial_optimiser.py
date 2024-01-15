@@ -1,8 +1,10 @@
-from typing import Tuple, List
+from typing import List
+from typing import Tuple
+
 from itertools import product
 
 from pyariadne import dp
-from pyariadne import EffectiveVectorMultivariateFunction
+from pyariadne import ValidatedVectorMultivariateFunction
 from pyariadne import evaluate
 from pyariadne import FloatDP
 from pyariadne import FloatDPBounds
@@ -38,7 +40,7 @@ def multiple_solutions(solutions):
 
 def _convert_problem(
     f: PolynomialFunction, D: FloatDPExactBox
-) -> Tuple[EffectiveVectorMultivariateFunction, FloatDPExactBox]:
+) -> Tuple[ValidatedVectorMultivariateFunction, FloatDPExactBox]:
     q_by_variable = []
     for n in range(f.n_variables):
         max_degree = f.max_degree_nth_variable(n=n) - 1
@@ -49,7 +51,7 @@ def _convert_problem(
         q = x_power_degree * f_derivative.evaluate_at_one_over_x()
         q_by_variable.append(q.function)
 
-    functions_to_optimise = EffectiveVectorMultivariateFunction(q_by_variable)
+    functions_to_optimise = ValidatedVectorMultivariateFunction(q_by_variable)
 
     domain = box_reciprocal(box=D)
 
@@ -60,7 +62,7 @@ class PolynomialOptimiser:
     @staticmethod
     def find_roots_of_q_over_box(
         solver: IntervalNewtonSolver,
-        system_of_equations: EffectiveVectorMultivariateFunction,
+        system_of_equations: ValidatedVectorMultivariateFunction,
         domain: FloatDPExactBox
     ) -> FloatDPBounds:
         solutions = solver.solve_all(system_of_equations, domain)
@@ -74,13 +76,13 @@ class PolynomialOptimiser:
         if convert_problem:
             f_to_optimise, domain = _convert_problem(f=f, D=D)
         else:
-            f_to_optimise = f.function.derivative(0)
+            f_to_optimise = ValidatedVectorMultivariateFunction([f.function.derivative(0)])
 
         domain = box_reciprocal(box=D) if convert_problem else D
         solution = self.find_roots_of_q_over_box(
             solver=solver, system_of_equations=f_to_optimise, domain=domain
         )
-        if type(solution) == FloatDP:
+        if isinstance(solution, FloatDP):
             solution = solution  # this could also be removed technically, but kept in for safety
         elif len(solution) > 1:
             solution = multiple_solutions(solution)
@@ -91,9 +93,9 @@ class PolynomialOptimiser:
         return solution
 
     # TODO: implement technique when user knowns that the optimum is in a certain box
-    def minise_all(self, f: PolynomialFunction) -> List[ValidatedNumber]:
+    def minimise_all(self, f: PolynomialFunction) -> List[ValidatedNumber]:
         INF = FloatDP.inf(dp)
-        DIM = f.n_variables # Number of dimensions
+        DIM = f.n_variables
 
         # Split on 3 boxes (default)
         box_1 = (-INF, -1)
@@ -104,20 +106,18 @@ class PolynomialOptimiser:
         all_possible_boxes = list(product(boxes, repeat=DIM))
 
         all_boxes = []
-        convert_list = [] # list with booleans whether or not to convert problem
+        convert_list = []
         for box_combination in all_possible_boxes:
             subdomain = [comb_part for comb_part in box_combination]
             box = FloatDPExactBox(subdomain)
 
             # TODO: later we probably want to know which part of the subdomain needs to be converted
             # But then we need to know how to convert when more than 1 part needs to be converted
-            if (subdomain.__contains__(box_1) or subdomain.__contains__(box_3)):
+            if subdomain.__contains__(box_1) or subdomain.__contains__(box_3):
                 convert_list.append(True)
             else:
                 convert_list.append(False)
-            # print(box)
             all_boxes.append(box)
-        # print(len(all_boxes))  # boxes^dim
 
         # Now that we know all boxes, we can use the default minimise function
         assert (len(all_boxes) == len(convert_list))

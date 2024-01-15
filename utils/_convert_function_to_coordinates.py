@@ -18,7 +18,7 @@ def convert_function_to_coordinates(n_variables: int, f: Union[str, Function]) -
     function_split_by_literals = function_str.split("+")
     function_as_coordinate = []
     for x in function_split_by_literals:
-        x = x.lstrip("(").rstrip(")")
+        x = x.lstrip("(").lstrip(")").rstrip(")").rstrip("(")
         coordinate = Coordinate(n_variables=n_variables, expression=x)
         if coordinate.powers:
             function_as_coordinate.append(coordinate)
