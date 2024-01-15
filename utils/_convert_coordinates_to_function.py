@@ -6,10 +6,10 @@ from pyariadne import sqr
 
 from utils._coordinate import Coordinate
 
+ONE = Dyadic("1")
 
-def convert_coordinates_to_function(
-    function_as_coordinates: List[Coordinate]
-) -> callable:
+
+def convert_coordinates_to_function(function_as_coordinates: List[Coordinate]) -> callable:
     elements_to_add = []
     for coordinate in function_as_coordinates:
         coefficient = coordinate.coefficient
@@ -17,7 +17,7 @@ def convert_coordinates_to_function(
             continue
 
         powers = coordinate.powers
-        if coefficient in [Dyadic("-1"), Dyadic("1")]:
+        if coefficient in [-ONE, ONE]:
             elements_to_multiply = []
         else:
             elements_to_multiply = [f"Dyadic('{coefficient}')"]

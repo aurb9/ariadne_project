@@ -13,7 +13,7 @@ from utils._scalar import is_scalar
 from utils.add_lists_elementwise import add_lists_elementwise
 
 
-def _format_expression(expression) -> str:
+def _format_expression(expression: str) -> str:
     expression = re.sub(r"/pow\((\w+),(\w+)\)", r"*pow(\1,-\2)", expression)
     expression = re.sub(r"/x(\d+)", r"*pow(x\1,-1)", expression)
     expression = re.sub(r"(\w+)\*\*(\d+)", r"pow(\1,\2)", expression)
@@ -21,14 +21,6 @@ def _format_expression(expression) -> str:
     expression = re.sub(r"\*1$", r"", expression)
 
     return expression
-
-
-def _custom_sort(list_of_strings: List[str]) -> List[str]:
-    def criterion(item: str) -> int:
-        match = re.search(r"x(\d+)", item)
-        return int(match.group(1))
-
-    return sorted(set(list_of_strings), key=criterion)
 
 
 class Coordinate:
