@@ -20,14 +20,16 @@ from utils.polynomial_function import PolynomialFunction
 # x^5+5x^4-3x^2+2x
 # f = PolynomialFunction(n_variables=1, f="[x[0]**5+5*x[0]**4-3*x[0]**2+2*x[0]")
 # x^5+3x^4-3x^2+2x
-# f = PolynomialFunction(n_variables=1, f="[x[0]**5+3*x[0]**4-3*x[0]**2+2*x[0]")
+f = PolynomialFunction(n_variables=1, f="[x[0]**5+3*x[0]**4-3*x[0]**2+2*x[0]")
 # x^5-5x^4+3x^2
-f = PolynomialFunction(n_variables=1, f="[x[0]**5-5*x[0]**4+3*x[0]**2") #solver exceptions, works correctly
+# f = PolynomialFunction(n_variables=1, f="[x[0]**5-5*x[0]**4+3*x[0]**2") #solver exceptions, works correctly
+
+# f = PolynomialFunction(n_variables=2, f="2*x[0]**2+x[1]**2")
 
 solver = PolynomialOptimiser()
 
-all_solutions = solver.minise_all(f=f)
+all_solutions = solver.minimise_all(f=f)
 print(all_solutions)
 
-x_global, fx_global = solver.final_solution(f, all_solutions)
+x_global, fx_global = solver.compute_global_optima(f, all_solutions)
 print(f'Global minimum x = {x_global} with f(x) = {fx_global}')
