@@ -4,10 +4,9 @@ from typing import Tuple
 from itertools import product
 
 from pyariadne import dp
-from pyariadne import definitely
+from pyariadne import definitely, possibly
 from pyariadne import is_nan
 from pyariadne import FloatDP
-from pyariadne import evaluate
 from pyariadne import FloatDPBounds
 from pyariadne import ValidatedNumber
 from pyariadne import FloatDPExactBox
@@ -77,13 +76,20 @@ class PolynomialOptimiser:
 
         return NAN
 
-    def minimise(self, f: PolynomialFunction, D: FloatDPExactBox, convert_problem: bool = True) -> ValidatedNumber:
+    def minimise(self, f: PolynomialFunction, D: FloatDPExactBox, f_to_optimise: list | None = None, convert_problem: bool = True) -> ValidatedNumber:
         solver = IntervalNewtonSolver(1e-8, 12)
-        if convert_problem:
-            f_to_optimise, domain = _convert_problem(f=f, D=D)
+        if f_to_optimise is None:
+            if convert_problem:
+                f_to_optimise, domain = _convert_problem(f=f, D=D)
+            else:
+                f_to_optimise = ValidatedVectorMultivariateFunction([f.function.derivative(0)])
+                domain = D
         else:
-            f_to_optimise = ValidatedVectorMultivariateFunction([f.function.derivative(0)])
+            f_to_optimise = [fun.function for fun in f_to_optimise]
+            f_to_optimise = ValidatedVectorMultivariateFunction(f_to_optimise)
             domain = D
+        print(f_to_optimise)
+        print(domain)
 
         solution = self.find_roots_of_q_over_box(
             solver=solver, system_of_equations=f_to_optimise, domain=domain
@@ -100,37 +106,65 @@ class PolynomialOptimiser:
 
     # TODO: implement technique when user knowns that the optimum is in a certain box
     def minimise_all(self, f: PolynomialFunction) -> List[ValidatedNumber]:
-        box_1 = (-INF, -1)
-        box_2 = (-1, 1)
-        box_3 = (1, INF)
-        boxes = [box_1, box_2, box_3]
+        b1 = (-1, 0)
+        b2 = (-1, 1)
+        b3 = (0, 1)
 
-        n_dimensions = f.n_variables
-        # TODO: also product of all functions and zip them together
-        # then we can remove the boolean list with converting
-        all_possible_boxes = list(product(boxes, repeat=n_dimensions))
+        domains_dict = {"b1": b1, "b2": b2, "b3": b3}
+        domains = list(domains_dict.keys())
 
+        #f = PolynomialFunction(n_variables=2, f="2*x[0]**2 + x[1]**2")
+        total_dimensions = f.n_variables
+
+        possible_functions = []  # contains functions wrt index [derivative, trick]
+        for dimension in range(total_dimensions):
+            # Normal derivative wrt dimension
+            f_derivative = PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(dimension))
+
+            # Polynomial trick wrt dimension
+            max_degree = f.max_degree_nth_variable(n=dimension) - 1
+            x_power_degree = PolynomialFunction(n_variables=f.n_variables, f=f"x[{dimension}]**{max_degree}")
+            # q = x_power_degree.function * f_derivative.evaluate_at_one_over_x().function
+            q = x_power_degree * f_derivative.evaluate_at_one_over_x()
+            possible_functions.append([f_derivative, q])
+
+        all_possible_domains = list(product(domains, repeat=total_dimensions))
+
+        # Lists that resemble all combination of possible domains and functions for them.
         all_boxes = []
-        convert_list = []
-        for box_combination in all_possible_boxes:
-            subdomain = [comb_part for comb_part in box_combination]
-            box = FloatDPExactBox(subdomain)
+        all_boxes_strings = []
+        all_functions = []
 
-            # TODO: later we probably want to know which part of the subdomain needs to be converted
-            # But then we need to know how to convert when more than 1 part needs to be converted
-            if subdomain.__contains__(box_1) or subdomain.__contains__(box_3):
-                convert_list.append(True)
-            else:
-                convert_list.append(False)
+        for combination in all_possible_domains:
+            subdomain_strings = [comb_part for comb_part in combination]
+            all_boxes_strings.append(subdomain_strings)
+            # Use dictionary look-up to get the actual box
+            subdomain_boxes = [domains_dict[comb_part] for comb_part in subdomain_strings]
+
+            functions = []
+            for dim in range(len(possible_functions)):
+                if subdomain_strings[dim] == 'b2':
+                    functions.append(possible_functions[dim][0])
+                else:
+                    functions.append(possible_functions[dim][1])
+            all_functions.append(functions)
+
+            box = FloatDPExactBox(subdomain_boxes)
             all_boxes.append(box)
+        print(all_boxes_strings)
+        assert (len(all_boxes) == len(all_functions))
 
-        assert len(all_boxes) == len(convert_list)
+        #assert len(all_boxes) == len(convert_list)
 
         critical_points = []
         for i in range(len(all_boxes)):
             d = all_boxes[i]
-            convert_problem = convert_list[i]
-            optimum = self.minimise(f=f, D=d, convert_problem=convert_problem)
+            f_to_optimise = all_functions[i]
+            if 'b2' not in all_boxes_strings[i]:
+                optimum = self.minimise(f=f, D=d, f_to_optimise=f_to_optimise, convert_problem=True)
+            else:
+                optimum = self.minimise(f=f, D=d, f_to_optimise=f_to_optimise, convert_problem=False)
+
             critical_points.append(optimum)
 
         return critical_points
@@ -157,7 +191,7 @@ class PolynomialOptimiser:
             index_location = -1
             for i in range(len(verified_float_solutions_fx)):
                 solution_fx = verified_float_solutions_fx[i]
-                if definitely(solution_fx < verified_global_solution_fx):
+                if possibly(solution_fx < verified_global_solution_fx):
                     verified_global_solution_fx = solution_fx
                     index_location = i
 
