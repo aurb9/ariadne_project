@@ -1,7 +1,5 @@
 from solvers.polynomial_optimiser import PolynomialOptimiser
-from utils.polynomial_function import PolynomialFunction
-
-from pyariadne import FloatDPBounds, dp, FloatDPBoundsVector
+from utils.string_parsing_version.polynomial_function import PolynomialFunction
 
 # Examples of polynomials of degree 2
 # f = PolynomialFunction(n_variables=1, f="[x[0]**2+2*x[0]]")
@@ -9,7 +7,7 @@ from pyariadne import FloatDPBounds, dp, FloatDPBoundsVector
 
 # Examples with polynomials of degrees 4 and 5
 # 2x^4-5x^3+2x
-f = PolynomialFunction(n_variables=1, f="[2*x[0]**4-5*x[0]**3+2*x[0]]")
+# f = PolynomialFunction(n_variables=1, f="[2*x[0]**4-5*x[0]**3+2*x[0]]")
 
 # x^4-3x^3+2x
 # f = PolynomialFunction(n_variables=1, f="[x[0]**4-3*x[0]**3+2*x[0]]")
@@ -30,8 +28,9 @@ f = PolynomialFunction(n_variables=1, f="[2*x[0]**4-5*x[0]**3+2*x[0]]")
 
 solver = PolynomialOptimiser()
 
-#TODO: check why x = 0.59 is missing, probably due to early comparison
-#print([f(FloatDPBoundsVector([x], dp)) for x in all_solutions])
+# Case studies formula
+f = PolynomialFunction(n_variables=1, f="x[0]**4+10/7*x[0]**3-4*x[0]**2-5/6*x[0]+1")
+
 critical_points = solver.minimise_all(f=f)
 print('Critical_points', critical_points)
 

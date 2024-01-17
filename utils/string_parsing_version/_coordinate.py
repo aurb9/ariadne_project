@@ -17,7 +17,7 @@ def _format_expression(expression: str) -> str:
     expression = re.sub(r"/pow\((\w+),(\w+)\)", r"*pow(\1,-\2)", expression)
     expression = re.sub(r"/x(\d+)", r"*pow(x\1,-1)", expression)
     expression = re.sub(r"(\w+)\*\*(\d+)", r"pow(\1,\2)", expression)
-    expression = re.sub(r"(-?\w+)\*(.*)", r"\2*\1", expression)
+    # expression = re.sub(r"(-?\w+)\*(.*)", r"\2*\1", expression)
     expression = re.sub(r"\*1$", r"", expression)
 
     return expression
@@ -42,8 +42,8 @@ class Coordinate:
         else:
             if "/" in expression:
                 numerator, denominator = expression.split("/")
-                self._coefficient = Dyadic(Rational(int(numerator), int(denominator)))
-            if "." in expression:
+                self._coefficient = Rational(int(numerator), int(denominator))
+            elif "." in expression:
                 self._coefficient = Dyadic(Decimal(expression))
             else:
                 coefficient = Dyadic(expression)

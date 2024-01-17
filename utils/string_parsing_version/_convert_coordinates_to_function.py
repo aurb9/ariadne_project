@@ -1,10 +1,8 @@
 from typing import List
 
-from pyariadne import pow
-from pyariadne import Dyadic
-from pyariadne import sqr
+from pyariadne import *
 
-from utils._coordinate import Coordinate
+from utils.string_parsing_version._coordinate import Coordinate
 
 ONE = Dyadic("1")
 
@@ -20,7 +18,7 @@ def convert_coordinates_to_function(function_as_coordinates: List[Coordinate]) -
         if coefficient in [-ONE, ONE]:
             elements_to_multiply = []
         else:
-            elements_to_multiply = [f"Dyadic('{coefficient}')"]
+            elements_to_multiply = [repr(coefficient)]
         for i, power in enumerate(powers):
             if power == 0:
                 continue
@@ -36,7 +34,7 @@ def convert_coordinates_to_function(function_as_coordinates: List[Coordinate]) -
             elements_to_multiply.append(term)
 
         if not elements_to_multiply:
-            elements_to_multiply = [f"Dyadic('{coefficient}')"]
+            elements_to_multiply = [repr(coefficient)]
 
         elements_to_add.append("*".join(elements_to_multiply))
 

@@ -3,7 +3,7 @@ from typing import Union
 
 from pyariadne import Function
 
-from utils._coordinate import Coordinate
+from utils.string_parsing_version._coordinate import Coordinate
 
 
 def convert_function_to_coordinates(n_variables: int, f: Union[str, Function]) -> List[Coordinate]:

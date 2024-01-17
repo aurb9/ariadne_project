@@ -15,7 +15,7 @@ from pyariadne import IntervalNewtonSolver
 from pyariadne import ValidatedVectorMultivariateFunction
 
 from utils.box_operations import box_reciprocal
-from utils.polynomial_function import PolynomialFunction
+from utils.string_parsing_version.polynomial_function import PolynomialFunction
 
 INF = FloatDP.inf(dp)
 NAN = FloatDP.nan(dp)

@@ -8,11 +8,11 @@ from pyariadne import Function
 from pyariadne import Rational
 from pyariadne import ValidatedScalarMultivariateFunction
 
-from utils._convert_coordinates_to_function import (
+from utils.string_parsing_version._convert_coordinates_to_function import (
     convert_coordinates_to_function
 )
-from utils._convert_function_to_coordinates import convert_function_to_coordinates
-from utils._coordinate import Coordinate
+from utils.string_parsing_version._convert_function_to_coordinates import convert_function_to_coordinates
+from utils.string_parsing_version._coordinate import Coordinate
 from utils._scalar import is_scalar
 
 _OPERATION_NOT_POSSIBLE_ERROR_MESSAGE = f"Operation not possible for objects of type PolynomialFunction and "

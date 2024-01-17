@@ -1,7 +1,7 @@
 from pyariadne import FloatDPExactBox, FloatDP, dp, is_nan, ValidatedNumber, evaluate
 
 from solvers.polynomial_optimiser import PolynomialOptimiser
-from utils.polynomial_function import PolynomialFunction
+from utils.string_parsing_version.polynomial_function import PolynomialFunction
 
 
 def eval_f(f: PolynomialFunction, x: FloatDP) -> FloatDP:
