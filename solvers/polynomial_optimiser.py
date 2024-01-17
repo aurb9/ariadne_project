@@ -3,11 +3,10 @@ from typing import Tuple
 
 from itertools import product
 
-from pyariadne import dp
+from pyariadne import dp, MultivariatePolynomial
 from pyariadne import definitely
 from pyariadne import is_nan
 from pyariadne import FloatDP
-from pyariadne import evaluate
 from pyariadne import FloatDPBounds
 from pyariadne import ValidatedNumber
 from pyariadne import FloatDPExactBox
@@ -16,7 +15,7 @@ from pyariadne import IntervalNewtonSolver
 from pyariadne import ValidatedVectorMultivariateFunction
 
 from utils.box_operations import box_reciprocal
-from utils.polynomial_function import PolynomialFunction
+from utils.string_parsing_version.polynomial_function import PolynomialFunction
 
 INF = FloatDP.inf(dp)
 NAN = FloatDP.nan(dp)
@@ -34,7 +33,7 @@ def multiple_solutions(f: PolynomialFunction, solutions: List[FloatDPBoundsVecto
     global_minimum = INF
     location_of_minimum = None
     for x in solutions:
-        f_value = f.function(x)
+        f_value = f(x)
         if definitely(f_value < global_minimum):
             global_minimum = f_value
             location_of_minimum = x
@@ -42,20 +41,19 @@ def multiple_solutions(f: PolynomialFunction, solutions: List[FloatDPBoundsVecto
     return location_of_minimum[0]
 
 
-def eval_f(f: PolynomialFunction, x: FloatDP) -> FloatDP:
-    return f.function([x])
-
-
 def _convert_problem(
     f: PolynomialFunction, D: FloatDPExactBox
 ) -> Tuple[ValidatedVectorMultivariateFunction, FloatDPExactBox]:
     q_by_variable = []
-    for n in range(f.n_variables):
+    n_variables = f.n_variables
+    x = MultivariatePolynomial[FloatDPBounds].coordinates(n_variables, dp)
+    for n in range(n_variables):
         max_degree = f.max_degree_nth_variable(n=n) - 1
-        x_power_degree = PolynomialFunction(n_variables=f.n_variables, f=f"x[{n}]**{max_degree}")
-        f_derivative = PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(n))
-        q = x_power_degree * f_derivative.evaluate_at_one_over_x()
-        q_by_variable.append(q.function)
+        x_power_degree = PolynomialFunction(n_variables=n_variables, f=x[n]**max_degree)
+        f_derivative = f.derivative(n=n)
+        f_derivative_evaluated_at_one_over_x = f_derivative.evaluate_at_one_over_x()
+        q = x_power_degree * f_derivative_evaluated_at_one_over_x
+        q_by_variable.append(q)
 
     functions_to_optimise = ValidatedVectorMultivariateFunction(q_by_variable)
 
@@ -82,7 +80,7 @@ class PolynomialOptimiser:
         if convert_problem:
             f_to_optimise, domain = _convert_problem(f=f, D=D)
         else:
-            f_to_optimise = ValidatedVectorMultivariateFunction([f.function.derivative(0)])
+            f_to_optimise = ValidatedVectorMultivariateFunction([f.derivative(0)])
             domain = D
 
         solution = self.find_roots_of_q_over_box(
@@ -145,11 +143,11 @@ class PolynomialOptimiser:
             return NAN, NAN
         elif len(verified_solutions) == 1:
             verified_global_solution = verified_solutions[0].get(dp).value()
-            verified_global_solution_fx = eval_f(f, verified_global_solution)
+            verified_global_solution_fx = f(verified_global_solution)
             return verified_global_solution, verified_global_solution_fx
         else:
             verified_float_solutions = [sol.get(dp).value() for sol in verified_solutions]
-            verified_float_solutions_fx = [eval_f(f, value) for value in verified_float_solutions]
+            verified_float_solutions_fx = [f(value) for value in verified_float_solutions]
             verified_combined_solutions = [
                 (i, j) for i, j in zip(verified_float_solutions, verified_float_solutions_fx)
             ]
@@ -163,3 +161,7 @@ class PolynomialOptimiser:
 
             verified_global_solution = verified_combined_solutions[index_location][0]
             return verified_global_solution, verified_global_solution_fx
+
+
+f = PolynomialFunction(n_variables=1, f="x[0]**4+10/7*x[0]**3-4*x[0]**2-5/6*x[0]+1")
+print(f)
