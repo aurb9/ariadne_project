@@ -1,5 +1,11 @@
+from pyariadne import dp
+from pyariadne import FloatDPBounds
+from pyariadne import MultivariatePolynomial
+
 from solvers.polynomial_optimiser import PolynomialOptimiser
-from utils.string_parsing_version.polynomial_function import PolynomialFunction
+from utils.polynomial_function import PolynomialFunction
+
+ps = MultivariatePolynomial[FloatDPBounds].coordinates(2, dp)
 
 # Examples of polynomials of degree 2
 # f = PolynomialFunction(n_variables=1, f="[x[0]**2+2*x[0]]")
@@ -20,7 +26,7 @@ from utils.string_parsing_version.polynomial_function import PolynomialFunction
 # x^5+5x^4-3x^2+2x
 # f = PolynomialFunction(n_variables=1, f="[x[0]**5+5*x[0]**4-3*x[0]**2+2*x[0]")
 # x^5+3x^4-3x^2+2x
-# f = PolynomialFunction(n_variables=1, f="[x[0]**5+3*x[0]**4-3*x[0]**2+2*x[0]")
+f = PolynomialFunction(1, ps[0]**5+3*ps[0]**4-3*ps[0]**2+2*ps[0])
 # x^5-5x^4+3x^2
 # f = PolynomialFunction(n_variables=1, f="[x[0]**5-5*x[0]**4+3*x[0]**2") #solver exceptions, works correctly
 
