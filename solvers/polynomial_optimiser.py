@@ -18,7 +18,7 @@ from pyariadne import ValidatedNumber
 from pyariadne import ValidatedVectorMultivariateFunction
 
 from utils.box_operations import box_reciprocal
-from utils.string_parsing_version.polynomial_function import PolynomialFunction
+from utils.polynomial_function import PolynomialFunction
 
 INF = FloatDP.inf(dp)
 NAN = FloatDP.nan(dp)
@@ -120,15 +120,15 @@ class PolynomialOptimiser:
         domains = list(domains_dict.keys())
 
         total_dimensions = f.n_variables
-
+        x = MultivariatePolynomial[FloatDPBounds].coordinates(total_dimensions, dp)
         possible_functions = []  # contains functions wrt index [derivative, trick]
         for dimension in range(total_dimensions):
             # Normal derivative wrt dimension
-            f_derivative = PolynomialFunction(n_variables=f.n_variables, f=f.function.derivative(dimension))
+            f_derivative = f.derivative(n=dimension)
 
             # Polynomial trick wrt dimension
             max_degree = f.max_degree_nth_variable(n=dimension) - 1
-            x_power_degree = PolynomialFunction(n_variables=f.n_variables, f=f"x[{dimension}]**{max_degree}")
+            x_power_degree = PolynomialFunction(n_variables=total_dimensions, f=x[dimension]**max_degree)
             # q = x_power_degree.function * f_derivative.evaluate_at_one_over_x().function
             q = x_power_degree * f_derivative.evaluate_at_one_over_x()
             possible_functions.append([f_derivative, q])
