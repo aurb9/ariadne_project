@@ -1,6 +1,8 @@
 from typing import Any
 from typing import List
 from typing import Optional
+from typing import Tuple
+from typing import Union
 
 from pyariadne import Dyadic
 from pyariadne import FloatDPBounds
@@ -18,28 +20,34 @@ class Coordinate:
     # _powers: MultiIndex = None
     _powers: List[int] = None
 
-    def __init__(self, coefficient: FloatDPBounds, powers: Optional[MultiIndex] = MultiIndex([])) -> None:
+    def __init__(
+        self, coefficient: FloatDPBounds, powers: Optional[Union[MultiIndex, List[int]]] = None
+    ) -> None:
         self._coefficient = coefficient
-        powerss = []
-        for x in str(powers):
-            if x == ";":
-                break
-            if x.isnumeric():
-                powerss.append(int(x))
-        self._powers = powerss
-        # self._powers = powers
+        if not powers:
+            self._powers = []
+        elif isinstance(powers, list):
+            self._powers = powers
+        else:
+            powerss = []
+            for x in str(powers):
+                if x == ";":
+                    break
+                if x.isnumeric():
+                    powerss.append(int(x))
+            self._powers = powerss
 
     def __repr__(self) -> str:
         return "Coordinate({" + str(self._powers) + ": " + str(self._coefficient) + "})"
 
     def __neg__(self) -> "Coordinate":
-        result = Coordinate(coefficient=-self._coefficient, powers=MultiIndex(self._powers))
+        result = Coordinate(coefficient=-self._coefficient, powers=self._powers)
 
         return result
 
     def __add__(self, other: "Coordinate") -> "Coordinate":
         assert self.powers == other.powers, "Cannot perform operation on different coordinates"
-        result = Coordinate(coefficient=self._coefficient + other._coefficient, powers=MultiIndex(self._powers))
+        result = Coordinate(coefficient=self._coefficient + other._coefficient, powers=self._powers)
 
         return result
 
@@ -48,13 +56,15 @@ class Coordinate:
 
     def __mul__(self, other: Any) -> "Coordinate":
         if is_scalar(x=other):
-            result = Coordinate(coefficient=self._coefficient * other, powers=MultiIndex(self._powers))
+            coefficient = self._coefficient * other
+            powers = self._powers
         elif isinstance(other, Coordinate):
+            coefficient = self._coefficient * other._coefficient
             powers = add_lists_elementwise(self._powers, other._powers)
-            result = Coordinate(coefficient=self._coefficient * other._coefficient, powers=MultiIndex(powers))
         else:
             raise Exception(_OPERATION_NOT_POSSIBLE_ERROR_MESSAGE, type(other))
 
+        result = Coordinate(coefficient=coefficient, powers=powers)
         return result
 
     def __rmul__(self, other: Any) -> "Coordinate":
@@ -63,9 +73,8 @@ class Coordinate:
     def _reciprocal(self) -> "Coordinate":
         result = Coordinate(
             coefficient=Dyadic(Rational(1, self._coefficient)),
-            powers=MultiIndex([-x for x in self._powers])
+            powers=[-x for x in self._powers]
         )
-
         return result
 
     def __truediv__(self, other: Any) -> "Coordinate":
@@ -89,7 +98,8 @@ class Coordinate:
         return result
 
     def one_over_x(self) -> "Coordinate":
-        result = Coordinate(coefficient=self._coefficient, powers=MultiIndex([-x for x in self._powers]))
+        powers = [-x for x in self._powers]
+        result = Coordinate(coefficient=self._coefficient, powers=powers)
 
         return result
 
@@ -98,5 +108,5 @@ class Coordinate:
         return self._coefficient
 
     @property
-    def powers(self) -> MultiIndex:
-        return MultiIndex(self._powers)
+    def powers(self) -> Tuple[int, ...]:
+        return tuple(self._powers)

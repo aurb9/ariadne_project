@@ -27,6 +27,7 @@ ps = MultivariatePolynomial[FloatDPBounds].coordinates(2, dp)
 # f = PolynomialFunction(n_variables=1, f="[x[0]**5+5*x[0]**4-3*x[0]**2+2*x[0]")
 # x^5+3x^4-3x^2+2x
 f = PolynomialFunction(1, ps[0]**5+3*ps[0]**4-3*ps[0]**2+2*ps[0])
+# f = PolynomialFunction(1, ps[0]**5+3*ps[0]**4-3*ps[0]**2+2*ps[0])
 # x^5-5x^4+3x^2
 # f = PolynomialFunction(n_variables=1, f="[x[0]**5-5*x[0]**4+3*x[0]**2") #solver exceptions, works correctly
 
@@ -35,7 +36,7 @@ f = PolynomialFunction(1, ps[0]**5+3*ps[0]**4-3*ps[0]**2+2*ps[0])
 solver = PolynomialOptimiser()
 
 # Case studies formula
-f = PolynomialFunction(n_variables=1, f="x[0]**4+10/7*x[0]**3-4*x[0]**2-5/6*x[0]+1")
+# f = PolynomialFunction(n_variables=1, f="x[0]**4+10/7*x[0]**3-4*x[0]**2-5/6*x[0]+1")
 
 critical_points = solver.minimise_all(f=f)
 print('Critical_points', critical_points)

@@ -2,13 +2,18 @@ from typing import Any
 from typing import List
 from typing import Optional
 
+from pyariadne import derivative
 from pyariadne import dp
 from pyariadne import evaluate
+from pyariadne import FloatDP
 from pyariadne import FloatDPBounds
+from pyariadne import FloatDPBoundsVector
 from pyariadne import MultiIndex
 from pyariadne import MultivariatePolynomial
 from pyariadne import Rational
+from pyariadne import ValidatedScalarMultivariateFunction
 
+from utils._convert_coordinates_to_function import convert_coordinates_to_function
 from utils._convert_coordinates_to_polynomial import convert_coordinates_to_polynomial
 from utils._convert_polynomial_to_coordinates import convert_polynomial_to_coordinates
 from utils._coordinate import Coordinate
@@ -29,17 +34,20 @@ class PolynomialFunction:
     ) -> None:
         assert f or coordinates, "Need to specify either the function or the coordinates"
         self._n_variables = n_variables
-        self._coordinates = convert_polynomial_to_coordinates(f=f)
-        if coordinates:
-            assert self._coordinates == coordinates
+        if f:
+            self._coordinates = convert_polynomial_to_coordinates(f=f)
+        else:
+            self._coordinates = coordinates
+        if f and coordinates:
+            assert convert_polynomial_to_coordinates(f=f) == coordinates
 
     def __repr__(self) -> str:
         return str(self.polynomial)
 
     def __call__(self, x: Any) -> Any:
-        if is_scalar(x=x):
-            x_to_evaluate = FloatDPBounds(x, dp)
-        elif isinstance(x, FloatDPBounds):
+        if is_scalar(x=x) or isinstance(x, FloatDP):
+            x_to_evaluate = FloatDPBoundsVector([x], dp)
+        elif isinstance(x, FloatDPBounds) or isinstance(x, FloatDPBoundsVector):
             x_to_evaluate = x
         else:
             raise Exception(f"PolynomialFunction object is not callable with object of type {type(x)}")
@@ -135,7 +143,7 @@ class PolynomialFunction:
         return result
 
     def derivative(self, n: int) -> "PolynomialFunction":
-        derivative_polynomial = self.polynomial.derivative(n)
+        derivative_polynomial = derivative(self.polynomial, n)
         result = PolynomialFunction(n_variables=self.n_variables, f=derivative_polynomial)
 
         return result
@@ -153,9 +161,14 @@ class PolynomialFunction:
 
     @property
     def polynomial(self) -> MultivariatePolynomial:
-        f_as_polynomial = convert_coordinates_to_polynomial(function_as_coordinates=self._coordinates)
+        f_as_polynomial = convert_coordinates_to_polynomial(coordinates=self._coordinates)
 
         return f_as_polynomial
+
+    @property
+    def function(self) -> ValidatedScalarMultivariateFunction:
+        f = convert_coordinates_to_function(n_variables=self._n_variables, coordinates=self._coordinates)
+        return f
 
     def max_degree_nth_variable(self, n: int) -> int:
         assert n < self._n_variables, f"{n}th variable does not exist, there are at most {self._n_variables} variables"

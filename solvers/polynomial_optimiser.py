@@ -72,6 +72,7 @@ class PolynomialOptimiser:
         system_of_equations: ValidatedVectorMultivariateFunction,
         domain: FloatDPExactBox
     ) -> FloatDPBounds:
+        print(system_of_equations)
         solutions = solver.solve_all(system_of_equations, domain)
         if solutions:
             return solutions
@@ -156,18 +157,15 @@ class PolynomialOptimiser:
 
             box = FloatDPExactBox(subdomain_boxes)
             all_boxes.append(box)
-        print(all_boxes_strings)
+
         assert (len(all_boxes) == len(all_functions))
 
         critical_points = []
         for i in range(len(all_boxes)):
             d = all_boxes[i]
             f_to_optimise = all_functions[i]
-            if 'b2' not in all_boxes_strings[i]:
-                optimum = self.minimise(f=f, D=d, f_to_optimise=f_to_optimise, convert_problem=True)
-            else:
-                optimum = self.minimise(f=f, D=d, f_to_optimise=f_to_optimise, convert_problem=False)
-
+            convert_problem = 'b2' not in all_boxes_strings[i]
+            optimum = self.minimise(f=f, D=d, f_to_optimise=f_to_optimise, convert_problem=convert_problem)
             critical_points.append(optimum)
 
         return critical_points
