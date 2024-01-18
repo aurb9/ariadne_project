@@ -183,11 +183,9 @@ class PolynomialOptimiser:
         if not verified_solutions:
             print("ERROR: NO REAL SOLUTION FOUND")
             print("All solutions found:", minima)
-            return NAN, NAN
+            verified_global_solution = NAN
         elif len(verified_solutions) == 1:
             verified_global_solution = verified_solutions[0].get(dp).value()
-            verified_global_solution_fx = f(verified_global_solution)
-            return verified_global_solution, verified_global_solution_fx
         else:
             verified_float_solutions = [sol.get(dp).value() for sol in verified_solutions]
             verified_float_solutions_fx = [f(value) for value in verified_float_solutions]
@@ -204,4 +202,4 @@ class PolynomialOptimiser:
 
             verified_global_solution = verified_combined_solutions[index_location][0]
 
-            return verified_global_solution
+        return verified_global_solution
