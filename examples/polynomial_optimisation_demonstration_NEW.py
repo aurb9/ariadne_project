@@ -41,5 +41,5 @@ solver = PolynomialOptimiser()
 critical_points = solver.minimise_all(f=f)
 print('Critical_points', critical_points)
 
-x_global, fx_global = solver.compute_global_optima(f, critical_points)
+x_global, fx_global = solver._compute_global_optima(f, critical_points)
 print(f'Global minimum x = {x_global} with f(x) = {fx_global}')

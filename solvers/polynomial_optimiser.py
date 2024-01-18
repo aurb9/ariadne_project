@@ -57,6 +57,8 @@ def _convert_problem(
         f_derivative_evaluated_at_one_over_x = f_derivative.evaluate_at_one_over_x()
         q = x_power_degree * f_derivative_evaluated_at_one_over_x
         q_by_variable.append(q)
+        print(q)
+        input()
 
     functions_to_optimise = ValidatedVectorMultivariateFunction(q_by_variable)
 
@@ -79,7 +81,7 @@ class PolynomialOptimiser:
 
         return NAN
 
-    def minimise(
+    def _find_local_minima_over_box(
         self,
         f: PolynomialFunction,
         D: FloatDPExactBox,
@@ -111,8 +113,16 @@ class PolynomialOptimiser:
         solution = ValidatedNumber(1 / solution) if convert_problem else ValidatedNumber(solution)
         return solution
 
+    def minimise(self, f: PolynomialFunction, D: FloatDPExactBox) -> ValidatedNumber:
+        minima = self.minimise_all(f=f, D=D)
+        global_minimum = self._compute_global_minimum(f=f, minima=minima)
+
+        return global_minimum
+
     # TODO: implement technique when user knowns that the optimum is in a certain box
-    def minimise_all(self, f: PolynomialFunction) -> List[ValidatedNumber]:
+    # TODO: this should return only minima, not all critical points (second derivative check?)
+    def minimise_all(self, f: PolynomialFunction, D: FloatDPExactBox) -> List[ValidatedNumber]:
+        # TODO: find correct minima
         b1 = (-1, 0)
         b2 = (-1, 1)
         b3 = (0, 1)
@@ -122,16 +132,14 @@ class PolynomialOptimiser:
 
         total_dimensions = f.n_variables
         x = MultivariatePolynomial[FloatDPBounds].coordinates(total_dimensions, dp)
-        possible_functions = []  # contains functions wrt index [derivative, trick]
+        possible_functions = []
         for dimension in range(total_dimensions):
-            # Normal derivative wrt dimension
             f_derivative = f.derivative(n=dimension)
 
-            # Polynomial trick wrt dimension
             max_degree = f.max_degree_nth_variable(n=dimension) - 1
             x_power_degree = PolynomialFunction(n_variables=total_dimensions, f=x[dimension]**max_degree)
-            # q = x_power_degree.function * f_derivative.evaluate_at_one_over_x().function
             q = x_power_degree * f_derivative.evaluate_at_one_over_x()
+
             possible_functions.append([f_derivative, q])
 
         all_possible_domains = list(product(domains, repeat=total_dimensions))
@@ -149,7 +157,7 @@ class PolynomialOptimiser:
 
             functions = []
             for dim in range(len(possible_functions)):
-                if subdomain_strings[dim] == 'b2':
+                if subdomain_strings[dim] == "b2":
                     functions.append(possible_functions[dim][0])
                 else:
                     functions.append(possible_functions[dim][1])
@@ -164,19 +172,17 @@ class PolynomialOptimiser:
         for i in range(len(all_boxes)):
             d = all_boxes[i]
             f_to_optimise = all_functions[i]
-            convert_problem = 'b2' not in all_boxes_strings[i]
+            convert_problem = "b2" not in all_boxes_strings[i]
             optimum = self.minimise(f=f, D=d, f_to_optimise=f_to_optimise, convert_problem=convert_problem)
             critical_points.append(optimum)
 
         return critical_points
 
-    def compute_global_optima(
-        self, f: PolynomialFunction, critical_points: List[ValidatedNumber]
-    ) -> Tuple[ValidatedNumber, FloatDP]:
-        verified_solutions = [solution for solution in critical_points if not is_nan(solution.get(dp).value())]
+    def _compute_global_minimum(self, f: PolynomialFunction, minima: List[ValidatedNumber]) -> ValidatedNumber:
+        verified_solutions = [solution for solution in minima if not is_nan(solution.get(dp).value())]
         if not verified_solutions:
             print("ERROR: NO REAL SOLUTION FOUND")
-            print("All solutions found:", critical_points)
+            print("All solutions found:", minima)
             return NAN, NAN
         elif len(verified_solutions) == 1:
             verified_global_solution = verified_solutions[0].get(dp).value()
@@ -197,4 +203,5 @@ class PolynomialOptimiser:
                     index_location = i
 
             verified_global_solution = verified_combined_solutions[index_location][0]
-            return verified_global_solution, verified_global_solution_fx
+
+            return verified_global_solution
