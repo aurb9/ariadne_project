@@ -42,7 +42,7 @@ class PolynomialFunction:
             assert convert_polynomial_to_coordinates(f=f) == coordinates
 
     def __repr__(self) -> str:
-        return str(self.polynomial)
+        return str(self.function)
 
     def __call__(self, x: Any) -> Any:
         if is_scalar(x=x) or isinstance(x, FloatDP):
