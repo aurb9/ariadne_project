@@ -1,27 +1,41 @@
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Tuple
+from typing import Union
 
 from itertools import product
 
 from pyariadne import definitely
 from pyariadne import dp
-from pyariadne import is_nan
 from pyariadne import FloatDP
 from pyariadne import FloatDPBounds
 from pyariadne import FloatDPBoundsVector
 from pyariadne import FloatDPExactBox
+from pyariadne import FloatDPExactInterval
+from pyariadne import intersection
 from pyariadne import IntervalNewtonSolver
 from pyariadne import MultivariatePolynomial
 from pyariadne import possibly
-from pyariadne import ValidatedNumber
+from pyariadne import ValidatedScalarMultivariateFunction
 from pyariadne import ValidatedVectorMultivariateFunction
 
 from utils.box_operations import box_reciprocal
+from utils.polynomial_optimisation_problem import PolynomialOptimisationProblem
 from utils.polynomial_function import PolynomialFunction
 
 INF = FloatDP.inf(dp)
-NAN = ValidatedNumber(FloatDP.nan(dp))
+NAN = FloatDP.nan(dp)
+
+B1_STR = "b1"
+B2_STR = "b2"
+B3_STR = "b3"
+
+B1 = FloatDPExactInterval((-INF, -1))
+B2 = FloatDPExactInterval((-1, 1))
+B3 = FloatDPExactInterval((1, INF))
+
+EMPTY_INTERVAL = FloatDPExactInterval((1, -1))
 
 
 def multiple_solutions(f: PolynomialFunction, solutions: List[FloatDPBoundsVector]) -> FloatDPBounds:
@@ -43,203 +57,92 @@ def multiple_solutions(f: PolynomialFunction, solutions: List[FloatDPBoundsVecto
 
     return location_of_minimum[0]
 
-def _convert_problem_wrt_var(
-        f: PolynomialFunction, n: int
-) -> Tuple[PolynomialFunction, PolynomialFunction]:
+
+def _compute_boxes_to_optimise_over(D: FloatDPExactBox) -> Dict[str, Union[FloatDPExactBox, None]]:
+    b1s = []
+    b2s = []
+    b3s = []
+    for x in range(D.dimension()):
+        b1 = intersection(B1, D[x])
+        b2 = intersection(B2, D[x])
+        b3 = intersection(B3, D[x])
+
+        if b1 != EMPTY_INTERVAL:
+            b1s.append(b1)
+        if b2 != EMPTY_INTERVAL:
+            b2s.append(b2)
+        if b3 != EMPTY_INTERVAL:
+            b3s.append(b3)
+
+    b1 = FloatDPExactBox(b1s)
+    b2 = FloatDPExactBox(b2s)
+    b3 = FloatDPExactBox(b3s)
+
+    result = {}
+    if b1.dimension() != 0:
+        result[B1_STR] = box_reciprocal(box=b1)
+    if b2.dimension() != 0:
+        result[B2_STR] = b2
+    if b3.dimension() != 0:
+        result[B3_STR] = box_reciprocal(box=b3)
+
+    return result
+
+
+def _compute_derivative_and_polynomial_trick_of_function(
+    f: PolynomialFunction, n: int
+) -> Tuple[ValidatedScalarMultivariateFunction, ValidatedScalarMultivariateFunction]:
     n_variables = f.n_variables
     x = MultivariatePolynomial[FloatDPBounds].coordinates(n_variables, dp)
 
     f_derivative = f.derivative(n=n)
 
     max_degree = f.max_degree_nth_variable(n=n) - 1
-    x_power_degree = PolynomialFunction(n_variables=n_variables, f=x[n] ** max_degree)
-    q = x_power_degree * f_derivative.evaluate_at_one_over_x()
+    x_power_degree = PolynomialFunction(n_variables=n_variables, f=x[n]**max_degree)
+    f_derivative_at_one_over_x = f_derivative.evaluate_at_one_over_x(n=n)
+    q = x_power_degree * f_derivative_at_one_over_x
 
-    return f_derivative, q
-
-
-def _convert_problem(
-        f: PolynomialFunction, D: FloatDPExactBox
-) -> Tuple[ValidatedVectorMultivariateFunction, FloatDPExactBox]:
-    q_by_variable = []
-    n_variables = f.n_variables
-    x = MultivariatePolynomial[FloatDPBounds].coordinates(n_variables, dp)
-    for n in range(n_variables):
-        max_degree = f.max_degree_nth_variable(n=n) - 1
-        x_power_degree = PolynomialFunction(n_variables=n_variables, f=x[n] ** max_degree)
-        f_derivative = f.derivative(n=n)
-        f_derivative_evaluated_at_one_over_x = f_derivative.evaluate_at_one_over_x()
-        q = x_power_degree * f_derivative_evaluated_at_one_over_x
-        q_by_variable.append(q)
-        print(q)
-        input()
-
-    functions_to_optimise = ValidatedVectorMultivariateFunction(q_by_variable)
-
-    domain = box_reciprocal(box=D)
-
-    return functions_to_optimise, domain
+    return f_derivative.function, q.function
 
 
 class PolynomialOptimiser:
     @staticmethod
-    def find_roots_of_q_over_box(
-            solver: IntervalNewtonSolver,
-            system_of_equations: ValidatedVectorMultivariateFunction,
-            domain: FloatDPExactBox
+    def solve_of_system_of_equations_within_box(
+        solver: IntervalNewtonSolver,
+        system_of_equations: ValidatedVectorMultivariateFunction,
+        domain: FloatDPExactBox
     ) -> List[FloatDPBoundsVector]:
-        #print(system_of_equations)
-        #print(domain)
-        #solver_2 = IntervalNewtonSolver(1e-8, 12)
         try:
             solutions = solver.solve_all(system_of_equations, domain)
-            #print('solver:', solver_2.solve_all(system_of_equations, domain))
-            #print('SOLUTIONS:', solutions)
         except RuntimeError:
-            solutions = NAN
-        #print('SOLUTIONS:', solutions)
-        if isinstance(solutions, list):
-            return solutions
-        else: return []
+            solutions = []
 
+        return solutions if isinstance(solutions, list) else [solutions]
 
-    def _find_local_minima_over_box(
-            self,
-            f: ValidatedVectorMultivariateFunction,
-            D: FloatDPExactBox,
-            convert_problems: List[bool]
-    ) -> List[ValidatedNumber]:
-        solver = IntervalNewtonSolver(1e-8, 12)
+    def _find_all_critical_points_within_box(self, p: PolynomialOptimisationProblem) -> List[FloatDPBoundsVector]:
+        solver = IntervalNewtonSolver(1e-8, 20)
+        solutions = self.solve_of_system_of_equations_within_box(solver=solver, system_of_equations=p.f, domain=p.D)
+        for i, x in enumerate(solutions):
+            if p.domains[i] != B2_STR:
+                for dimension in range(x.size()):
+                    x[dimension] = 1/x[dimension]
 
-        solutions = self.find_roots_of_q_over_box(
-            solver=solver, system_of_equations=f, domain=D
-        )
-
-        for solution in solutions:
-            for dim in range(len(convert_problems)):
-                if convert_problems[dim]:
-                    solution[dim] = 1/solution[dim]
-
-        #if len(solution) == 1:
         return solutions
-        #if isinstance(solution, FloatDP):
-        #    solution = solution
-        #elif len(solution) > 1:
-        #    solution = multiple_solutions(f, solution)
-        #else:
-        #    solution = solution[0][0]
 
-        #solution = ValidatedNumber(1 / solution) if convert_problem else ValidatedNumber(solution)
-        #return solution
-
-    # TODO: decide if D is optional for minimise or minimise_all
-    def minimise(self, f: PolynomialFunction, D: Optional[FloatDPExactBox]) -> ValidatedNumber:
-        minima = self.minimise_all(f=f, D=D)
-        print(minima)
-        global_minimum_location = self._compute_global_minimum(f=f, minima=minima)
+    def minimise(self, f: PolynomialFunction, D: Optional[FloatDPExactBox] = None) -> FloatDPBoundsVector:
+        all_minima = self.minimise_all(f=f, D=D)
+        global_minimum_location = self._compute_global_minimum(f=f, all_minima=all_minima)
 
         return global_minimum_location
 
-    # TODO: implement technique when user knowns that the optimum is in a certain box
-    # TODO: this should return only minima, not all critical points (second derivative check?)
-    def minimise_all(self, f: PolynomialFunction, D: Optional[FloatDPExactBox] = None) -> List[ValidatedNumber]:
-        """
-        This function returns all minima. The user can specify a domain over which to minimise.
-        If the domain is not specified, then the function assumes an unbounded domain.
-        :param f: normal function
-        :param D: the optional domain
-        :return: list of ValidatedNumber which resembles the minima location
-        """
-        # TODO: find correct minima
-
-        # Assumes unbounded domain
-        if D is None:
-            # For each function, we store the derivative and the polynomial trick one
-            # in possible_functions, because we need to find their roots.
-            # So possible_functions[i] returns (f'_i(x), q_i(x))
-            total_dimensions = f.n_variables
-            possible_functions = []
-            for dimension in range(total_dimensions):
-                f_derivative, q = _convert_problem_wrt_var(f=f, n=dimension)
-                print('q',q)
-                print('q.coor', q._coordinates)
-                print('q.fun', q.function)
-                #input()
-                possible_functions.append([f_derivative, q])
-
-            # We split the unbounded domain into 3 subdomains and change 2 of these subdomains
-            # 1. (-inf, -1) --> [-1, 0) with q(x) = 0
-            # 2. (-1, 1) --> [-1, 1] with f'(x) = 0
-            # 1. (1, inf) --> (0, 1] with q(x) = 0
-
-            b1 = (-1, 0)
-            b2 = (-1, 1)
-            b3 = (0, 1)
-
-            domains_dict = {"b1": b1, "b2": b2, "b3": b3}
-            domains = list(domains_dict.keys())
-            all_possible_domains = list(product(domains, repeat=total_dimensions))
-
-            # Now, we need to combine the domains with their functions. Since #functions < #domains, we need
-            # to check it
-            # Lists that resemble all combination of possible domains and functions for them.
-            all_boxes = []
-            all_boxes_strings = []
-            all_functions = []
-
-            for combination in all_possible_domains:
-                # First construct the subdomains
-                subdomain_strings = [comb_part for comb_part in combination]
-                all_boxes_strings.append(subdomain_strings)
-                # Use dictionary look-up to get the actual box
-                subdomain_boxes = [domains_dict[comb_part] for comb_part in subdomain_strings]
-                box = FloatDPExactBox(subdomain_boxes)
-                all_boxes.append(box)
-
-                # Now, construct the functions belonging to the subdomains
-                functions = []
-                for dim in range(len(possible_functions)):
-                    if subdomain_strings[dim] == "b2":
-                        functions.append(possible_functions[dim][0])  # f'(x)
-                    else:
-                        functions.append(possible_functions[dim][1])  # q(x)
-                all_functions.append(functions)
-
-            assert (len(all_boxes) == len(all_functions))
-
-            # Use the solver to solve roots for the functions (f'(x) or q(x)).
-            critical_points = []
-            for i in range(len(all_boxes)):
-                d = all_boxes[i]
-                f_to_optimise = all_functions[i]
-                conversions = [not "b2" == subdomain for subdomain in all_boxes_strings[i]]
-                print('box strings', all_boxes_strings[i])
-                print('f[0]', f_to_optimise[0].function)
-                #print('f[1]', f_to_optimise[1].function)
-                print(type(f_to_optimise[0]))
-                print('Box', d)
-                print('convert', conversions)
-                f_to_optimise = ValidatedVectorMultivariateFunction([fun.function for fun in f_to_optimise])
-                optimum = self._find_local_minima_over_box(f=f_to_optimise, D=d, convert_problems=conversions)
-
-                # Convert 1/x where necessary
-                print('optimum', optimum)
-                critical_points.append(optimum)
-                print(len(critical_points))
-
-            return critical_points
-
-        else:
-            a = 0
-            # Check subdomains and compute functions (f_der, q) where necessary
-
-        # Compare critical point
-
-    def _compute_global_minimum(self, f: PolynomialFunction, minima: List[ValidatedNumber]) -> ValidatedNumber:
-        verified_solutions = [solution for solution in minima if not is_nan(solution.get(dp).value())]
+    # TODO: refactor this
+    def _compute_global_minimum(
+        self, f: PolynomialFunction, all_minima: List[FloatDPBoundsVector]
+    ) -> FloatDPBoundsVector:
+        verified_solutions = [x for x in all_minima if x]
         if not verified_solutions:
             print("ERROR: NO REAL SOLUTION FOUND")
-            print("All solutions found:", minima)
+            print("All solutions found:", all_minima)
             verified_global_solution = NAN
         elif len(verified_solutions) == 1:
             verified_global_solution = verified_solutions[0].get(dp).value()
@@ -260,3 +163,47 @@ class PolynomialOptimiser:
             verified_global_solution = verified_combined_solutions[index_location][0]
 
         return verified_global_solution
+    
+    def _create_subproblems(self, f: PolynomialFunction, D: FloatDPExactBox) -> List[PolynomialOptimisationProblem]:
+        n_variables = f.n_variables
+        all_functions = [_compute_derivative_and_polynomial_trick_of_function(f=f, n=n) for n in range(n_variables)]
+
+        all_domains = _compute_boxes_to_optimise_over(D=D)
+        domains_per_problem = list(product(all_domains.keys(), repeat=n_variables))
+
+        problems = []
+        for x in domains_per_problem:
+            functions = []
+            domains = []
+            for n in range(n_variables):
+                box = x[n]
+                function = all_functions[n][0] if box == B2_STR else all_functions[n][1]
+                functions.append(function)
+
+                domain = all_domains[box][n]
+                domains.append(domain)
+
+            problem = PolynomialOptimisationProblem(
+                f=ValidatedVectorMultivariateFunction(functions),
+                D=FloatDPExactBox(domains),
+                domains=x
+            )
+            problems.append(problem)
+
+        return problems
+
+    # TODO: this should return only minima, not all critical points (second derivative check?)
+    def minimise_all(self, f: PolynomialFunction, D: Optional[FloatDPExactBox] = None) -> List[FloatDPBoundsVector]:
+        n_variables = f.n_variables
+        if D is None:
+            D = FloatDPExactBox([(-INF, INF) for _ in range(n_variables)])
+
+        assert D.dimension() == n_variables, "Boxes not specified for all variables"
+
+        problems = self._create_subproblems(f=f, D=D)
+        critical_points = []
+        for p in problems:
+            solutions_to_problem = self._find_all_critical_points_within_box(p=p)
+            critical_points = [*critical_points, *solutions_to_problem]
+
+        return critical_points
