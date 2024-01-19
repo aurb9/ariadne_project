@@ -38,26 +38,6 @@ B3 = FloatDPExactInterval((1, INF))
 EMPTY_INTERVAL = FloatDPExactInterval((1, -1))
 
 
-def multiple_solutions(f: PolynomialFunction, solutions: List[FloatDPBoundsVector]) -> FloatDPBounds:
-    """
-    When there are multiple solutions are found by the Interval Newton Solver (INS),
-    we need to ensure the lowest function value is returned. This method returns the
-    location of the lowest value (so the x, not f(x)).
-    :param f: original function
-    :param solutions: multiple solutions for the root
-    :return: location_min which is the location of the lowest minima in the solutions
-    """
-    global_minimum = INF
-    location_of_minimum = None
-    for x in solutions:
-        f_value = f(x)
-        if definitely(f_value < global_minimum):
-            global_minimum = f_value
-            location_of_minimum = x
-
-    return location_of_minimum[0]
-
-
 def _compute_boxes_to_optimise_over(D: FloatDPExactBox) -> Dict[str, Union[FloatDPExactBox, None]]:
     b1s = []
     b2s = []
