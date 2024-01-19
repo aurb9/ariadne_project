@@ -149,8 +149,8 @@ class PolynomialFunction:
         return result
 
     # TODO: eventually this should go to __call__
-    def evaluate_at_one_over_x(self) -> "PolynomialFunction":
-        coordinates = [x.one_over_x() for x in self._coordinates]
+    def evaluate_at_one_over_x(self, n: int) -> "PolynomialFunction":
+        coordinates = [x.one_over_x(n=n) for x in self._coordinates]
         result = PolynomialFunction(n_variables=self._n_variables, coordinates=coordinates)
 
         return result
