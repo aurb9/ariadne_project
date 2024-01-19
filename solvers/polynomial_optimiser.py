@@ -89,6 +89,10 @@ def _compute_boxes_to_optimise_over(D: FloatDPExactBox) -> Dict[str, Union[Float
     return result
 
 
+# TODO: 4. then this should change (perhaps make another method to compute derivative,
+#  compute this first for all variables in _create_subproblems and then compute the q for those we need)
+#  or anything else you can think of that is efficient (I feel like we will double-compute quite some stuff with this
+#  suggestion, but I feel like this would be the case for any way we go)
 def _compute_derivative_and_polynomial_trick_of_function(
     f: PolynomialFunction, n: int
 ) -> Tuple[ValidatedScalarMultivariateFunction, ValidatedScalarMultivariateFunction]:
@@ -123,6 +127,8 @@ class PolynomialOptimiser:
         solver = IntervalNewtonSolver(1e-8, 20)
         solutions = self.solve_of_system_of_equations_within_box(solver=solver, system_of_equations=p.f, domain=p.D)
         for i, x in enumerate(solutions):
+            # TODO: 5. then here we should not check if we are in b1 or b3, but if we need to convert ==>
+            #  if p.domains[i]: 1/x     maybe rename domains then?
             if p.domains[i] != B2_STR:
                 for dimension in range(x.size()):
                     x[dimension] = 1/x[dimension]
@@ -166,8 +172,10 @@ class PolynomialOptimiser:
     
     def _create_subproblems(self, f: PolynomialFunction, D: FloatDPExactBox) -> List[PolynomialOptimisationProblem]:
         n_variables = f.n_variables
+        # TODO: 3. so that we do not necessarily compute q (if no inf then no need to compute it at all)
         all_functions = [_compute_derivative_and_polynomial_trick_of_function(f=f, n=n) for n in range(n_variables)]
 
+        # TODO: 2. then we should do this first
         all_domains = _compute_boxes_to_optimise_over(D=D)
         domains_per_problem = list(product(all_domains.keys(), repeat=n_variables))
 
@@ -177,9 +185,12 @@ class PolynomialOptimiser:
             domains = []
             for n in range(n_variables):
                 box = x[n]
+                # TODO: 1. here it assumes that if we are in b1 or b3 it should be q
+                #  so we should check if endpoint is inf
                 function = all_functions[n][0] if box == B2_STR else all_functions[n][1]
                 functions.append(function)
 
+                # TODO: 1. and this should be a list of boolean then
                 domain = all_domains[box][n]
                 domains.append(domain)
 
