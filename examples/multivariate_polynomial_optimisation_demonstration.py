@@ -13,9 +13,10 @@ f = PolynomialFunction(n_variables=2, f=(x[0]-2)**2+(x[1]+3)**2)  # min (2,-3) b
 # f = PolynomialFunction(n_variables=2, f=x[0]**2+x[1]**2)  # (0, 0)
 opt = PolynomialOptimiser()
 
-d = FloatDPExactBox([(1, 2), (-5, -3)])
-critical_points = opt.minimise_all(f=f, D=d)
-print('Critical_points', critical_points)
+d = FloatDPExactBox([(1, 3), (-4, -2)])
+minima = opt.minimise_all(f=f, D=d)
+# minima = opt.minimise_all(f=f)
+print('Minima:', minima)
 
 #x_global, fx_global = opt._compute_global_optima(f, critical_points)
 #print(f'Global minimum x = {x_global} with f(x) = {fx_global}')

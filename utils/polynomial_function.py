@@ -148,6 +148,13 @@ class PolynomialFunction:
 
         return result
 
+    def second_derivative(self, n_1: int, n_2: Optional[int] = None) -> "PolynomialFunction":
+        first_derivative = self.derivative(n_1)
+        if n_2 is None: n_2 = n_1
+        second_derivative = first_derivative.derivative(n_2)
+
+        return second_derivative
+
     # TODO: eventually this should go to __call__
     def evaluate_at_one_over_x(self, n: int) -> "PolynomialFunction":
         coordinates = [x.one_over_x(n=n) for x in self._coordinates]
