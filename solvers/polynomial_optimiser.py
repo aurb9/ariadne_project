@@ -6,7 +6,6 @@ from typing import Union
 
 from itertools import product
 
-from pyariadne import definitely
 from pyariadne import dp
 from pyariadne import FloatDP
 from pyariadne import FloatDPBounds
