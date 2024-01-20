@@ -9,7 +9,7 @@ ZERO = FloatDP(0, dp)
 ONE = FloatDP(1, dp)
 
 
-def box_reciprocal(box: FloatDPExactInterval) -> Tuple[FloatDP, FloatDP]:
+def box_reciprocal(box: FloatDPExactInterval) -> FloatDPExactInterval:
     """
     Convert a single box by 1/box. E.g., box=[-5, 10] --> new_box = [-1/5, 1/10]
     :param subdomain: an interval with a lowerbound and upperbound in the original domain
@@ -30,4 +30,6 @@ def box_reciprocal(box: FloatDPExactInterval) -> Tuple[FloatDP, FloatDP]:
     new_box_lower_bound = new_box_lower_bound.lower().raw()
     new_box_upper_bound = new_box_upper_bound.lower().raw()
 
-    return new_box_lower_bound, new_box_upper_bound
+    result = FloatDPExactInterval((new_box_lower_bound, new_box_upper_bound))
+
+    return result
