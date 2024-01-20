@@ -7,9 +7,14 @@ from pyariadne import ValidatedVectorMultivariateFunction
 class PolynomialOptimisationProblem:
     f: ValidatedVectorMultivariateFunction
     D: FloatDPExactBox
-    domains: List[bool]
+    is_conversion_needed_per_dimension: List[bool]
 
-    def __init__(self, f: ValidatedVectorMultivariateFunction, D: FloatDPExactBox, domains: List[bool]):
+    def __init__(
+        self,
+        f: ValidatedVectorMultivariateFunction,
+        D: FloatDPExactBox,
+        is_conversion_needed_per_dimension: List[bool]
+    ) -> None:
         self.f = f
         self.D = D
-        self.domains = domains
+        self.is_conversion_needed_per_dimension = is_conversion_needed_per_dimension

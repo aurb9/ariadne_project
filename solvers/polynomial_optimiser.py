@@ -33,45 +33,33 @@ B1 = FloatDPExactInterval((-INF, -1))
 B2 = FloatDPExactInterval((-1, 1))
 B3 = FloatDPExactInterval((1, INF))
 
-EMPTY_INTERVAL = FloatDPExactInterval((1, -1))
-
 
 # TODO: I think this is completely wrong actually
 def _compute_boxes_to_optimise_over(
     D: FloatDPExactBox, endpoints_infinity: Dict[int, Dict[str, bool]]
-) -> Dict[str, Union[FloatDPExactBox, None]]:
-    b1s = []
-    b2s = []
-    b3s = []
+) -> Dict[int, Dict[str, FloatDPExactBox]]:
+    domains_per_variable = {}
     for x in range(D.dimension()):
         b1 = intersection(B1, D[x])
         b2 = intersection(B2, D[x])
         b3 = intersection(B3, D[x])
 
-        if b1 != EMPTY_INTERVAL:
-            if endpoints_infinity[x][B1_STR]:
-                b1 = box_reciprocal(b1)
-            b1s.append(b1)
-        if b2 != EMPTY_INTERVAL:
-            b2s.append(b2)
-        if b3 != EMPTY_INTERVAL:
-            if endpoints_infinity[x][B3_STR]:
-                b3 = box_reciprocal(b3)
-            b3s.append(b3)
+        if endpoints_infinity[x][B1_STR]:
+            b1 = box_reciprocal(b1)
+        if endpoints_infinity[x][B3_STR]:
+            b3 = box_reciprocal(b3)
 
-    b1 = FloatDPExactBox(b1s)
-    b2 = FloatDPExactBox(b2s)
-    b3 = FloatDPExactBox(b3s)
+        domains = {}
+        if not b1.empty():
+            domains[B1_STR] = b1
+        if not b2.empty():
+            domains[B2_STR] = b2
+        if not b3.empty():
+            domains[B3_STR] = b3
 
-    result = {}
-    if b1.dimension() != 0:
-        result[B1_STR] = b1
-    if b2.dimension() != 0:
-        result[B2_STR] = b2
-    if b3.dimension() != 0:
-        result[B3_STR] = b3
+        domains_per_variable[x] = domains
 
-    return result
+    return domains_per_variable
 
 
 def _check_endpoints_infinity(D: FloatDPExactBox) -> Dict[int, Dict[str, bool]]:
@@ -125,7 +113,8 @@ class PolynomialOptimiser:
         # We do not need to compute the boxes if INF is not an endpoint
         # But how to later combine the boxes? --> Need to fix _compute_boxes_to_optimise_over
         all_domains = _compute_boxes_to_optimise_over(D=D, endpoints_infinity=endpoints_infinity)
-        domains_per_problem = list(product(all_domains.keys(), repeat=n_variables))
+        possible_domains_per_variable = [list(x.keys()) for x in all_domains.values()]
+        domains_per_problem = list(product(*possible_domains_per_variable, repeat=1))
         # Problem, we need to get the same list of conversions as we constructed problems
 
         # TODO: 3. depending on the domains_per_problem, we determine if we need q or not.
@@ -160,13 +149,13 @@ class PolynomialOptimiser:
                 functions.append(function.function)
                 list_of_booleans_converting.append(need_to_convert)
 
-                domain = all_domains[box][n]
+                domain = all_domains[n][box]
                 domains.append(domain)
 
             problem = PolynomialOptimisationProblem(
                 f=ValidatedVectorMultivariateFunction(functions),
                 D=FloatDPExactBox(domains),
-                domains=list_of_booleans_converting
+                is_conversion_needed_per_dimension=list_of_booleans_converting
             )
             problems.append(problem)
 
@@ -180,7 +169,7 @@ class PolynomialOptimiser:
 
         minima = []
         for i, x in enumerate(solutions):
-            if p.domains[i]:
+            if p.is_conversion_needed_per_dimension[i]:
                 for dimension in range(x.size()):
                     x[dimension] = 1 / x[dimension]
 
@@ -236,6 +225,6 @@ class PolynomialOptimiser:
 
     def minimise(self, f: PolynomialFunction, D: Optional[FloatDPExactBox] = None) -> FloatDPBoundsVector:
         all_minima = self.minimise_all(f=f, D=D)
-        global_minimum_location = self._compute_global_minimum(f=f, all_minima=all_minima)
+        global_minimum = self._compute_global_minimum(f=f, all_minima=all_minima)
 
-        return global_minimum_location
+        return global_minimum
