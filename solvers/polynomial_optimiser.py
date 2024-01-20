@@ -7,6 +7,7 @@ from itertools import product
 from pyariadne import dp
 from pyariadne import is_inf
 from pyariadne import FloatDP
+from pyariadne import definitely
 from pyariadne import FloatDPBounds
 from pyariadne import FloatDPBoundsVector
 from pyariadne import FloatDPExactBox
@@ -185,37 +186,26 @@ class PolynomialOptimiser:
 
         return minima
 
-    # TODO: refactor this
     def _compute_global_minimum(
-        self, f: PolynomialFunction, all_minima: List[FloatDPBoundsVector]
+        self, f: PolynomialFunction, minima: List[FloatDPBoundsVector]
     ) -> FloatDPBoundsVector:
-        verified_solutions = [x for x in all_minima if x]
-        if not verified_solutions:
+        if len(minima) == 0:
             print("ERROR: NO REAL SOLUTION FOUND")
-            print("All solutions found:", all_minima)
-            verified_global_solution = NAN
-        elif len(verified_solutions) == 1:
-            verified_global_solution = verified_solutions[0].get(dp).value()
-        else:
-            verified_float_solutions = [sol.get(dp).value() for sol in verified_solutions]
-            verified_float_solutions_fx = [f(value) for value in verified_float_solutions]
-            verified_combined_solutions = [
-                (i, j) for i, j in zip(verified_float_solutions, verified_float_solutions_fx)
-            ]
-            verified_global_solution_fx = INF
-            index_location = -1
-            for i in range(len(verified_float_solutions_fx)):
-                solution_fx = verified_float_solutions_fx[i]
-                if possibly(solution_fx < verified_global_solution_fx):
-                    verified_global_solution_fx = solution_fx
-                    index_location = i
+        fx_global = FloatDP.inf(dp)
+        x_global_i = -1
 
-            verified_global_solution = verified_combined_solutions[index_location][0]
+        for i in range(len(minima)):
+            minimum = minima[i]
+            fx = f(minimum)
+            if definitely(fx < fx_global):
+                fx_global = fx
+                x_global_i = i
+        x_global_minimum = minima[x_global_i]
 
-        return verified_global_solution
+        return x_global_minimum
 
     def minimise(self, f: PolynomialFunction, D: Optional[FloatDPExactBox] = None) -> FloatDPBoundsVector:
         all_minima = self.minimise_all(f=f, D=D)
-        global_minimum = self._compute_global_minimum(f=f, all_minima=all_minima)
+        global_minimum = self._compute_global_minimum(f=f, minima=all_minima)
 
         return global_minimum
