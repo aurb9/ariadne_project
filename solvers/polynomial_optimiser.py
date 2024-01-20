@@ -1,7 +1,6 @@
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Tuple
 from typing import Union
 
 from itertools import product
@@ -17,7 +16,6 @@ from pyariadne import intersection
 from pyariadne import IntervalNewtonSolver
 from pyariadne import MultivariatePolynomial
 from pyariadne import possibly
-from pyariadne import ValidatedScalarMultivariateFunction
 from pyariadne import ValidatedVectorMultivariateFunction
 
 from utils.box_operations import box_reciprocal
@@ -138,11 +136,10 @@ class PolynomialOptimiser:
         for n in range(n_variables):
             f_derivative = f.derivative(n=n)
             need_to_compute_trick = any(list(endpoints_infinity[n].values()))
+            functions = [f_derivative]
             if need_to_compute_trick:
                 f_trick = _compute_polynomial_trick_of_function_for_nth_variable(f_derivative=f_derivative, n=n)
-                functions = [f_derivative, f_trick]
-            else:
-                functions = [f_derivative]
+                functions.append(f_trick)
 
             all_functions_per_variable[n] = functions
 
