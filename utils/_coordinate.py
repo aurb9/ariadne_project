@@ -98,7 +98,7 @@ class Coordinate:
         return result
 
     def one_over_x(self, n: int) -> "Coordinate":
-        powers = self._powers
+        powers = self._powers.copy()
         powers[n] = - powers[n]
         result = Coordinate(coefficient=self._coefficient, powers=powers)
 

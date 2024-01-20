@@ -1,7 +1,6 @@
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Union
 
 from itertools import product
 
@@ -34,7 +33,6 @@ B2 = FloatDPExactInterval((-1, 1))
 B3 = FloatDPExactInterval((1, INF))
 
 
-# TODO: I think this is completely wrong actually
 def _compute_boxes_to_optimise_over(
     D: FloatDPExactBox, endpoints_infinity: Dict[int, Dict[str, bool]]
 ) -> Dict[int, Dict[str, FloatDPExactBox]]:
@@ -110,17 +108,10 @@ class PolynomialOptimiser:
         n_variables = f.n_variables
 
         endpoints_infinity = _check_endpoints_infinity(D=D)
-        # We do not need to compute the boxes if INF is not an endpoint
-        # But how to later combine the boxes? --> Need to fix _compute_boxes_to_optimise_over
         all_domains = _compute_boxes_to_optimise_over(D=D, endpoints_infinity=endpoints_infinity)
         possible_domains_per_variable = [list(x.keys()) for x in all_domains.values()]
         domains_per_problem = list(product(*possible_domains_per_variable, repeat=1))
-        # Problem, we need to get the same list of conversions as we constructed problems
 
-        # TODO: 3. depending on the domains_per_problem, we determine if we need q or not.
-        # However, #functions << #domains for large dimensional problems.
-        # We can use endpoints_infinity to determine if we should get q :)
-        # TODO: 3. so that we do not necessarily compute q (if no inf then no need to compute it at all)
         all_functions_per_variable = {}
         for n in range(n_variables):
             f_derivative = f.derivative(n=n)
@@ -169,8 +160,8 @@ class PolynomialOptimiser:
 
         minima = []
         for i, x in enumerate(solutions):
-            if p.is_conversion_needed_per_dimension[i]:
-                for dimension in range(x.size()):
+            for dimension in range(len(p.is_conversion_needed_per_dimension)):
+                if p.is_conversion_needed_per_dimension[dimension]:
                     x[dimension] = 1 / x[dimension]
 
             second_derivative_test = [possibly(f.second_derivative(n_1=dim)(x) > 0) for dim in range(x.size())]
