@@ -2,7 +2,6 @@ from typing import Tuple
 
 from pyariadne import dp
 from pyariadne import FloatDP
-from pyariadne import FloatDPExactBox
 from pyariadne import FloatDPExactInterval
 
 
@@ -10,7 +9,7 @@ ZERO = FloatDP(0, dp)
 ONE = FloatDP(1, dp)
 
 
-def _convert_single_box(box: FloatDPExactInterval) -> Tuple[FloatDP, FloatDP]:
+def box_reciprocal(box: FloatDPExactInterval) -> Tuple[FloatDP, FloatDP]:
     """
     Convert a single box by 1/box. E.g., box=[-5, 10] --> new_box = [-1/5, 1/10]
     :param subdomain: an interval with a lowerbound and upperbound in the original domain
@@ -32,15 +31,3 @@ def _convert_single_box(box: FloatDPExactInterval) -> Tuple[FloatDP, FloatDP]:
     new_box_upper_bound = new_box_upper_bound.lower().raw()
 
     return new_box_lower_bound, new_box_upper_bound
-
-
-def box_reciprocal(box: FloatDPExactBox) -> FloatDPExactBox:
-    """
-    Converting the entire domain to 1/domain by going over every subdomain and converting that
-    :param box: a box containing the domain (can be single or multiple)
-    :return: the new_domain which is 1/input_domain
-    """
-    sub_boxes = [_convert_single_box(box[x]) for x in range(box.dimension())]
-    new_box = FloatDPExactBox(sub_boxes)
-
-    return new_box
