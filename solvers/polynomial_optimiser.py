@@ -1,6 +1,7 @@
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Union
 
 from itertools import product
 
@@ -188,21 +189,19 @@ class PolynomialOptimiser:
 
     def _compute_global_minimum(
         self, f: PolynomialFunction, minima: List[FloatDPBoundsVector]
-    ) -> FloatDPBoundsVector:
-        if len(minima) == 0:
-            print("ERROR: NO REAL SOLUTION FOUND")
-        fx_global = FloatDP.inf(dp)
-        x_global_i = -1
+    ) -> Union[FloatDPBoundsVector, None]:
+        if not minima:
+            return None
 
-        for i in range(len(minima)):
-            minimum = minima[i]
-            fx = f(minimum)
-            if definitely(fx < fx_global):
-                fx_global = fx
-                x_global_i = i
-        x_global_minimum = minima[x_global_i]
+        global_minimum = INF
+        global_minimum_objective_value = INF
+        for x in minima:
+            x_objective_value = f(x)
+            if definitely(x_objective_value < global_minimum_objective_value):
+                global_minimum = x
+                global_minimum_objective_value = x_objective_value
 
-        return x_global_minimum
+        return global_minimum
 
     def minimise(self, f: PolynomialFunction, D: Optional[FloatDPExactBox] = None) -> FloatDPBoundsVector:
         all_minima = self.minimise_all(f=f, D=D)
