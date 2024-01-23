@@ -170,7 +170,7 @@ class PolynomialOptimiser:
             if all(second_derivative_test):
                 minima.append(solutions[i])
 
-        return solutions
+        return minima
 
     def minimise_all(self, f: PolynomialFunction, D: Optional[FloatDPExactBox] = None) -> List[FloatDPBoundsVector]:
         n_variables = f.n_variables
