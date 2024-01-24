@@ -1,6 +1,7 @@
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Tuple
 from typing import Union
 
 from itertools import product
@@ -123,7 +124,9 @@ class PolynomialOptimiser:
 
         return solutions if isinstance(solutions, list) else [solutions]
 
-    def _create_subproblems(self, f: PolynomialFunction, D: FloatDPExactBox) -> List[PolynomialOptimisationProblem]:
+    def _create_subproblems(
+        self, f: PolynomialFunction, D: FloatDPExactBox
+    ) -> Tuple[List[PolynomialFunction], List[PolynomialOptimisationProblem]]:
         n_variables = f.n_variables
 
         endpoints_infinity = _check_endpoints_infinity(D=D)
@@ -132,8 +135,11 @@ class PolynomialOptimiser:
         domains_per_problem = list(product(*possible_domains_per_variable, repeat=1))
 
         all_functions_per_variable = {}
+        f_derivatives = []
         for n in range(n_variables):
             f_derivative = f.derivative(n=n)
+            f_derivatives.append(f_derivative)
+
             need_to_compute_trick = any(list(endpoints_infinity[n].values()))
             functions = [f_derivative]
             if need_to_compute_trick:
@@ -169,12 +175,12 @@ class PolynomialOptimiser:
             )
             problems.append(problem)
 
-        return problems
+        return f_derivatives, problems
 
     def _find_all_minima_within_box(
         self, f: PolynomialFunction, p: PolynomialOptimisationProblem
     ) -> List[FloatDPBoundsVector]:
-        solver = IntervalNewtonSolver(1e-8, 20)
+        solver = IntervalNewtonSolver(1e-8, 100)
         solutions = self.solve_of_system_of_equations_within_box(solver=solver, system_of_equations=p.f, domain=p.D)
 
         minima = []
@@ -189,18 +195,38 @@ class PolynomialOptimiser:
 
         return minima
 
+    def _get_endpoints_if_minima(
+        self, f_derivatives: List[PolynomialFunction], D: FloatDPExactBox
+    ) -> List[FloatDPBoundsVector]:
+        lower_endpoints = []
+        upper_endpoints = []
+        for x in range(D.dimension()):
+            lower_endpoints.append(D[x].lower_bound())
+            upper_endpoints.append(D[x].upper_bound())
+
+        to_add = []
+        if all([definitely(f(x) > 0) for f, x in zip(f_derivatives, lower_endpoints)]):
+            to_add.append(FloatDPBoundsVector(lower_endpoints))
+        if all([definitely(f(x) < 0) for f, x in zip(f_derivatives, upper_endpoints)]):
+            to_add.append(FloatDPBoundsVector(upper_endpoints))
+
+        return to_add
+
+
     def minimise_all(self, f: PolynomialFunction, D: Optional[FloatDPExactBox] = None) -> List[FloatDPBoundsVector]:
         n_variables = f.n_variables
-        if D is None:
-            D = FloatDPExactBox([(-INF, INF) for _ in range(n_variables)])
+        domain = FloatDPExactBox([(-INF, INF) for _ in range(n_variables)]) if D is None else D
 
-        assert D.dimension() == n_variables, "Boxes not specified for all variables"
+        assert domain.dimension() == n_variables, "Boxes not specified for all variables"
 
-        problems = self._create_subproblems(f=f, D=D)
+        f_derivatives, problems = self._create_subproblems(f=f, D=domain)
         minima = []
         for p in problems:
             solutions_to_problem = self._find_all_minima_within_box(f=f, p=p)
             minima = [*minima, *solutions_to_problem]
+
+        if D is not None:
+            minima = [*minima, *self._get_endpoints_if_minima(f_derivatives=f_derivatives, D=domain)]
 
         return minima
 
