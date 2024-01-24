@@ -26,6 +26,7 @@ from utils.polynomial_function import PolynomialFunction
 INF = FloatDP.inf(dp)
 NAN = FloatDP.nan(dp)
 EPS = FloatDP.eps(dp)
+ZERO = FloatDP(0, dp)
 
 B1_STR = "b1"
 B2_STR = "b2"
@@ -53,7 +54,11 @@ def _compute_boxes_to_optimise_over(
         domains = {}
         if not b1.empty():
             new_lower_bound = (b1.lower_bound()-EPS).lower().raw()
-            b1 = FloatDPExactInterval((new_lower_bound, -EPS))
+            if b1.upper_bound() == ZERO:
+                b1 = FloatDPExactInterval((new_lower_bound, -EPS))
+            else:
+                new_upper_bound = (b1.upper_bound() + EPS).upper().raw()
+                b1 = FloatDPExactInterval((new_lower_bound, new_upper_bound))
             domains[B1_STR] = b1
         if not b2.empty():
             new_lower_bound = (b2.lower_bound()-EPS).lower().raw()
@@ -62,7 +67,12 @@ def _compute_boxes_to_optimise_over(
             domains[B2_STR] = b2
         if not b3.empty():
             new_upper_bound = (b3.upper_bound()+EPS).upper().raw()
-            b3 = FloatDPExactInterval((EPS, new_upper_bound))
+            if b3.lower_bound() == ZERO:
+                b3 = FloatDPExactInterval((EPS, new_upper_bound))
+            else:
+                new_lower_bound = (b3.lower_bound() + EPS).lower().raw()
+                b3 = FloatDPExactInterval((new_lower_bound, new_upper_bound))
+
             domains[B3_STR] = b3
         domains_per_variable[x] = domains
 
