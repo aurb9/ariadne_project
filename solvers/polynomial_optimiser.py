@@ -109,11 +109,6 @@ class PolynomialOptimiser:
     ) -> List[FloatDPBoundsVector]:
         try:
             solutions = solver.solve_all(system_of_equations, domain)
-            if solutions:
-                for x in solutions:
-                    print("dom", domain)
-                    print("sol", x)
-                    print("f(sol)", system_of_equations(x))
         except RuntimeError:
             solutions = []
 
