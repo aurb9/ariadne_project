@@ -25,6 +25,7 @@ from utils.polynomial_function import PolynomialFunction
 
 INF = FloatDP.inf(dp)
 NAN = FloatDP.nan(dp)
+EPS = FloatDP.eps(dp)
 
 B1_STR = "b1"
 B2_STR = "b2"
@@ -51,12 +52,18 @@ def _compute_boxes_to_optimise_over(
 
         domains = {}
         if not b1.empty():
+            new_lower_bound = (b1.lower_bound()-EPS).lower().raw()
+            b1 = FloatDPExactInterval((new_lower_bound, -EPS))
             domains[B1_STR] = b1
         if not b2.empty():
+            new_lower_bound = (b2.lower_bound()-EPS).lower().raw()
+            new_upper_bound = (b2.upper_bound()+EPS).upper().raw()
+            b2 = FloatDPExactInterval((new_lower_bound, new_upper_bound))
             domains[B2_STR] = b2
         if not b3.empty():
+            new_upper_bound = (b3.upper_bound()+EPS).upper().raw()
+            b3 = FloatDPExactInterval((EPS, new_upper_bound))
             domains[B3_STR] = b3
-
         domains_per_variable[x] = domains
 
     return domains_per_variable
