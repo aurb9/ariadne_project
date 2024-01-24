@@ -1,4 +1,4 @@
-from pyariadne import dp
+from pyariadne import dp, FloatDP
 from pyariadne import FloatDPBounds
 from pyariadne import MultivariatePolynomial
 
