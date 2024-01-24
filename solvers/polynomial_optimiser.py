@@ -119,6 +119,11 @@ class PolynomialOptimiser:
     ) -> List[FloatDPBoundsVector]:
         try:
             solutions = solver.solve_all(system_of_equations, domain)
+            # if solutions:
+            #     print(solutions)
+            #     print(system_of_equations)
+            #     print(system_of_equations(solutions[0]))
+            #     input()
         except RuntimeError:
             solutions = []
 
@@ -180,7 +185,7 @@ class PolynomialOptimiser:
     def _find_all_minima_within_box(
         self, f: PolynomialFunction, p: PolynomialOptimisationProblem
     ) -> List[FloatDPBoundsVector]:
-        solver = IntervalNewtonSolver(1e-8, 100)
+        solver = IntervalNewtonSolver(1e-8, 10)
         solutions = self.solve_of_system_of_equations_within_box(solver=solver, system_of_equations=p.f, domain=p.D)
 
         minima = []
