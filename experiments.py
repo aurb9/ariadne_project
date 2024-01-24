@@ -1,0 +1,50 @@
+from pyariadne import *
+# Solvers
+opt = InteriorPointOptimiser()
+opt2 = KarushKuhnTuckerOptimiser()
+g = Function(1, lambda v :v)
+
+# First test function 
+print('FIRST TEST FUNCTION:')
+D= BoxDomainType([{0:2}])
+f = Function(1, lambda x: pow(x[0],4) + (10 * pow(x[0],3))/7 - (4* pow(x[0],2)) - (5 * x[0])/6 +1)
+p = ValidatedOptimisationProblem(f,D,g,D)
+o_1 = opt.minimise(p)
+o_2 = opt2.minimise(p)
+print('x value interior point: ',o_1)
+obejective_value_1 = evaluate(f,FloatDPApproximationVector(o_1, dp) )
+print('objective value interior point', obejective_value_1)
+print('x value KKT: ',o_2)
+obejective_value_2 = evaluate(f,FloatDPApproximationVector(o_2, dp) )
+print('objective value KKT', obejective_value_2)
+print()
+
+# Second test function
+print('SECOND TEST FUNCTION:') 
+D2= BoxDomainType([{-2:1}])
+f2 = Function(1, lambda x:pow(x[0],6) + (3* pow(x[0],5))/4 -(2* pow(x[0],3))/3-(5* pow(x[0], 2))/8)
+p2 = ValidatedOptimisationProblem(f2,D2,g,D2)
+o2_1 = opt.minimise(p2)
+o2_2 = opt2.minimise(p2)
+print('x value interior point: ',o2_1)
+obejective_value2_1 = evaluate(f2,FloatDPApproximationVector(o2_1, dp) )
+print('objective value interior point', obejective_value2_1)
+print('x value KKT: ',o2_2)
+obejective_value2_2 = evaluate(f2,FloatDPApproximationVector(o2_2, dp) )
+print('objective value KKT', obejective_value2_2)
+print()
+
+
+# Case study 2:
+print('SEXCOND CASE STUDY:')
+D3= BoxDomainType([{-2:2}])
+f3 = Function(1, lambda x: (6 * x[0])/10 + 10 - (95 * pow(x[0], 2))/100)
+p3 = ValidatedOptimisationProblem(f3,D3,g,D3)
+o3_1 = opt.minimise(p3)
+o3_2 = opt2.minimise(p3)
+print('x value interior point: ',o3_1)
+obejective_value3_1 = evaluate(f3,FloatDPApproximationVector(o3_1, dp) )
+print('objective value interior point:', obejective_value3_1)
+print('x value KKT: ',o3_2)
+obejective_value3_2 = evaluate(f3,FloatDPApproximationVector(o3_2, dp) )
+print('objective value KKT:', obejective_value3_2)
